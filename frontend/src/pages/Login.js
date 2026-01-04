@@ -54,15 +54,23 @@ const Login = () => {
     if (!validateForm()) return;
 
     setLoading(true);
+    setErrors({}); // Clear previous errors
+    
     try {
+      console.log('Login: Attempting login with:', formData.email);
       const result = await login(formData);
+      console.log('Login: Result received:', result);
+      
       if (result.success) {
+        console.log('Login: Success, navigating to dashboard');
         navigate('/dashboard');
       } else {
-        setErrors({ submit: result.message });
+        console.log('Login: Failed with message:', result.message);
+        setErrors({ submit: result.message || 'Login failed. Please try again.' });
       }
     } catch (error) {
-      setErrors({ submit: handleApiError(error) });
+      console.error('Login: Unexpected error:', error);
+      setErrors({ submit: handleApiError(error) || 'An unexpected error occurred. Please try again.' });
     } finally {
       setLoading(false);
     }

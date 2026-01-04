@@ -1,10 +1,19 @@
 const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
+const { statsCache, getPagination } = require('../utils/performance');
 const { sendResponse, asyncHandler } = require('../utils/helpers');
 
 // Get dashboard analytics
 const getDashboardStats = asyncHandler(async (req, res) => {
-  const { period = '30' } = req.query; // days
+  const { period = '30' } = req.query;
+  const cacheKey = `dashboard_stats_${period}`;
+  
+  // Check cache first
+  const cachedStats = statsCache.get(cacheKey);
+  if (cachedStats) {
+    return sendResponse(res, 200, true, 'Dashboard statistics retrieved successfully (cached)', cachedStats);
+  }
+
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - parseInt(period));
 
@@ -86,7 +95,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   const totalUsers = await User.countDocuments({ isActive: true });
   const totalRequests = await ServiceRequest.countDocuments();
 
-  sendResponse(res, 200, true, 'Dashboard statistics retrieved successfully', {
+  const dashboardData = {
     overview: {
       totalRequests,
       totalUsers,
@@ -96,7 +105,12 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     categoryDistribution: categoryStats,
     priorityDistribution: priorityStats,
     requestsTrend: trendStats
-  });
+  };
+
+  // Cache the results
+  statsCache.set(cacheKey, dashboardData);
+
+  sendResponse(res, 200, true, 'Dashboard statistics retrieved successfully', dashboardData);
 });
 
 // Get requests with advanced filters
@@ -109,11 +123,11 @@ const getFilteredRequests = asyncHandler(async (req, res) => {
     dateFrom,
     dateTo,
     department,
-    page = 1,
-    limit = 10,
     sortBy = 'createdAt',
     sortOrder = 'desc'
   } = req.query;
+
+  const { page, limit, skip } = getPagination(req.query.page, req.query.limit);
 
   // Build filter object
   const filter = {};
@@ -133,8 +147,6 @@ const getFilteredRequests = asyncHandler(async (req, res) => {
   const sort = {};
   sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-  const skip = (page - 1) * limit;
-
   // Get requests with user department filter
   let requests = await ServiceRequest.find(filter)
     .populate({
@@ -144,7 +156,8 @@ const getFilteredRequests = asyncHandler(async (req, res) => {
     })
     .sort(sort)
     .skip(skip)
-    .limit(parseInt(limit));
+    .limit(limit)
+    .lean(); // Performance optimization
 
   // Filter out requests where user doesn't match department filter
   if (department) {
@@ -156,7 +169,7 @@ const getFilteredRequests = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, 'Filtered requests retrieved successfully', {
     requests,
     pagination: {
-      current: parseInt(page),
+      current: page,
       total: Math.ceil(total / limit),
       count: requests.length,
       totalRequests: total

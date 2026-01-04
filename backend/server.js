@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const { sanitizeInput, mongoSanitize, createRateLimit } = require('./middleware/security');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
@@ -12,22 +14,44 @@ const app = express();
 connectDB();
 
 // Security middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'your-frontend-domain.com' : 'http://localhost:3000',
-  credentials: true
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
 }));
 
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? 'your-frontend-domain.com' : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Compression middleware
+app.use(compression());
+
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+const generalLimiter = createRateLimit(15 * 60 * 1000, 100, 'Too many requests, please try again later');
+const authLimiter = createRateLimit(15 * 60 * 1000, 5, 'Too many authentication attempts, please try again later');
+
+app.use(generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Security middleware
+app.use(mongoSanitize());
+app.use(sanitizeInput);
+
+const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -40,27 +64,14 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Smart Campus Service Request System API',
     version: '1.0.0',
-    status: 'Running'
+    status: 'Running',
+    timestamp: new Date().toISOString()
   });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
 

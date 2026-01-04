@@ -71,6 +71,11 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login(credentials);
       console.log('AuthContext: Login response:', response.data);
       
+      // Check if response is successful
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Login failed');
+      }
+      
       const { user, token } = response.data.data;
 
       localStorage.setItem('token', token);
@@ -88,7 +93,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: false });
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed',
+        message: error.response?.data?.message || error.message || 'Login failed',
       };
     }
   };
@@ -97,6 +102,12 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await authAPI.register(userData);
+      
+      // Check if response is successful
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Registration failed');
+      }
+      
       const { user, token } = response.data.data;
 
       localStorage.setItem('token', token);
@@ -112,7 +123,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: false });
       return {
         success: false,
-        message: error.response?.data?.message || 'Registration failed',
+        message: error.response?.data?.message || error.message || 'Registration failed',
       };
     }
   };

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestAPI } from '../services/api';
+import { debounce } from '../utils/performance';
+import { sanitizeInput } from '../utils/security';
 import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError } from '../utils/helpers';
 import '../styles/dashboard.css';
 
@@ -56,13 +58,14 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleFilterChange = (key, value) => {
+  const handleFilterChange = debounce((key, value) => {
+    const sanitizedValue = sanitizeInput(value);
     setFilters(prev => ({
       ...prev,
-      [key]: value,
+      [key]: sanitizedValue,
       page: 1 // Reset to first page when filtering
     }));
-  };
+  }, 300);
 
   const handleLogout = () => {
     logout();
