@@ -1,0 +1,148 @@
+/* How It Works Section Styles */
+.how-it-works {
+  padding: 6rem 0;
+  background: white;
+}
+
+.how-it-works-header {
+  margin-bottom: 4rem;
+}
+
+.steps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+}
+
+.step-number {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.step-content {
+  flex: 1;
+  background: #f8f9fa;
+  padding: 2rem;
+  border-radius: 12px;
+  border-left: 4px solid #007bff;
+  transition: all 0.3s ease;
+}
+
+.step-content:hover {
+  background: #e3f2fd;
+  transform: translateX(10px);
+}
+
+.step-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.step-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.step-description {
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.step-connector {
+  position: absolute;
+  left: 29px;
+  top: 60px;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to bottom, #007bff, #e9ecef);
+  z-index: -1;
+}
+
+.step-item:last-child .step-connector {
+  display: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .how-it-works {
+    padding: 4rem 0;
+  }
+  
+  .step-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.5rem;
+  }
+  
+  .step-number {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+  
+  .step-content {
+    padding: 1.5rem;
+    border-left: none;
+    border-top: 4px solid #007bff;
+  }
+  
+  .step-content:hover {
+    transform: translateY(-5px);
+  }
+  
+  .step-connector {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 50px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .how-it-works {
+    padding: 3rem 0;
+  }
+  
+  .steps-container {
+    gap: 2rem;
+  }
+  
+  .step-content {
+    padding: 1.25rem;
+  }
+  
+  .step-icon {
+    font-size: 1.8rem;
+  }
+  
+  .step-title {
+    font-size: 1.2rem;
+  }
+  
+  .step-description {
+    font-size: 0.95rem;
+  }
+}

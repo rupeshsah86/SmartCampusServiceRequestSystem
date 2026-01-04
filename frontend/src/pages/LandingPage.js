@@ -1,0 +1,24 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import Hero from '../components/Hero';
+import Features from '../components/Features';
+import HowItWorks from '../components/HowItWorks';
+import RoleExplanation from '../components/RoleExplanation';
+import Footer from '../components/Footer';
+import '../styles/landing.css';
+
+const LandingPage = () => {
+  return (
+    <div className="landing-page">
+      <Navbar />
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <RoleExplanation />
+      <Footer />
+    </div>
+  );
+};
+
+export default LandingPage;

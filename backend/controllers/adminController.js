@@ -1,0 +1,282 @@
+const ServiceRequest = require('../models/ServiceRequest');
+const User = require('../models/User');
+const { sendResponse, asyncHandler } = require('../utils/helpers');
+
+// Get dashboard analytics
+const getDashboardStats = asyncHandler(async (req, res) => {
+  const { period = '30' } = req.query; // days
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - parseInt(period));
+
+  // Total requests count by status
+  const statusStats = await ServiceRequest.aggregate([
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Requests by category
+  const categoryStats = await ServiceRequest.aggregate([
+    {
+      $group: {
+        _id: '$category',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Priority distribution
+  const priorityStats = await ServiceRequest.aggregate([
+    {
+      $group: {
+        _id: '$priority',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Recent requests trend (last 7 days)
+  const trendStats = await ServiceRequest.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+
+  // Average resolution time
+  const resolutionTime = await ServiceRequest.aggregate([
+    {
+      $match: {
+        status: 'resolved',
+        resolvedAt: { $exists: true }
+      }
+    },
+    {
+      $project: {
+        resolutionTime: {
+          $divide: [
+            { $subtract: ['$resolvedAt', '$createdAt'] },
+            1000 * 60 * 60 * 24 // Convert to days
+          ]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        avgResolutionTime: { $avg: '$resolutionTime' }
+      }
+    }
+  ]);
+
+  // Total users count
+  const totalUsers = await User.countDocuments({ isActive: true });
+  const totalRequests = await ServiceRequest.countDocuments();
+
+  sendResponse(res, 200, true, 'Dashboard statistics retrieved successfully', {
+    overview: {
+      totalRequests,
+      totalUsers,
+      avgResolutionTime: resolutionTime[0]?.avgResolutionTime || 0
+    },
+    statusDistribution: statusStats,
+    categoryDistribution: categoryStats,
+    priorityDistribution: priorityStats,
+    requestsTrend: trendStats
+  });
+});
+
+// Get requests with advanced filters
+const getFilteredRequests = asyncHandler(async (req, res) => {
+  const {
+    status,
+    category,
+    priority,
+    assignedTo,
+    dateFrom,
+    dateTo,
+    department,
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = req.query;
+
+  // Build filter object
+  const filter = {};
+  if (status) filter.status = status;
+  if (category) filter.category = category;
+  if (priority) filter.priority = priority;
+  if (assignedTo) filter.assignedTo = { $regex: assignedTo, $options: 'i' };
+
+  // Date range filter
+  if (dateFrom || dateTo) {
+    filter.createdAt = {};
+    if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) filter.createdAt.$lte = new Date(dateTo);
+  }
+
+  // Build sort object
+  const sort = {};
+  sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  const skip = (page - 1) * limit;
+
+  // Get requests with user department filter
+  let requests = await ServiceRequest.find(filter)
+    .populate({
+      path: 'userId',
+      select: 'name email department role phone',
+      match: department ? { department: { $regex: department, $options: 'i' } } : {}
+    })
+    .sort(sort)
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  // Filter out requests where user doesn't match department filter
+  if (department) {
+    requests = requests.filter(req => req.userId);
+  }
+
+  const total = await ServiceRequest.countDocuments(filter);
+
+  sendResponse(res, 200, true, 'Filtered requests retrieved successfully', {
+    requests,
+    pagination: {
+      current: parseInt(page),
+      total: Math.ceil(total / limit),
+      count: requests.length,
+      totalRequests: total
+    },
+    filters: {
+      status,
+      category,
+      priority,
+      assignedTo,
+      dateFrom,
+      dateTo,
+      department
+    }
+  });
+});
+
+// Bulk update requests
+const bulkUpdateRequests = asyncHandler(async (req, res) => {
+  const { requestIds, updates } = req.body;
+
+  if (!requestIds || !Array.isArray(requestIds) || requestIds.length === 0) {
+    return sendResponse(res, 400, false, 'Request IDs array is required');
+  }
+
+  if (!updates || Object.keys(updates).length === 0) {
+    return sendResponse(res, 400, false, 'Updates object is required');
+  }
+
+  // Validate allowed update fields
+  const allowedFields = ['status', 'priority', 'assignedTo', 'adminRemarks'];
+  const updateFields = Object.keys(updates);
+  const invalidFields = updateFields.filter(field => !allowedFields.includes(field));
+
+  if (invalidFields.length > 0) {
+    return sendResponse(res, 400, false, `Invalid update fields: ${invalidFields.join(', ')}`);
+  }
+
+  // Perform bulk update
+  const updateData = { ...updates };
+  if (updates.status === 'resolved') updateData.resolvedAt = new Date();
+  if (updates.status === 'closed') updateData.closedAt = new Date();
+
+  const result = await ServiceRequest.updateMany(
+    { _id: { $in: requestIds } },
+    { $set: updateData }
+  );
+
+  sendResponse(res, 200, true, `${result.modifiedCount} requests updated successfully`, {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount
+  });
+});
+
+// Get user management data
+const getUserManagement = asyncHandler(async (req, res) => {
+  const { role, department, isActive, page = 1, limit = 10 } = req.query;
+
+  const filter = {};
+  if (role) filter.role = role;
+  if (department) filter.department = { $regex: department, $options: 'i' };
+  if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+  const skip = (page - 1) * limit;
+
+  const users = await User.find(filter)
+    .select('-password')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const total = await User.countDocuments(filter);
+
+  // Get request counts for each user
+  const usersWithStats = await Promise.all(
+    users.map(async (user) => {
+      const requestCount = await ServiceRequest.countDocuments({ userId: user._id });
+      return {
+        ...user.toObject(),
+        requestCount
+      };
+    })
+  );
+
+  sendResponse(res, 200, true, 'Users retrieved successfully', {
+    users: usersWithStats,
+    pagination: {
+      current: parseInt(page),
+      total: Math.ceil(total / limit),
+      count: users.length,
+      totalUsers: total
+    }
+  });
+});
+
+// Toggle user status
+const toggleUserStatus = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return sendResponse(res, 404, false, 'User not found');
+  }
+
+  user.isActive = !user.isActive;
+  await user.save();
+
+  sendResponse(res, 200, true, `User ${user.isActive ? 'activated' : 'deactivated'} successfully`, {
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive
+    }
+  });
+});
+
+module.exports = {
+  getDashboardStats,
+  getFilteredRequests,
+  bulkUpdateRequests,
+  getUserManagement,
+  toggleUserStatus
+};
