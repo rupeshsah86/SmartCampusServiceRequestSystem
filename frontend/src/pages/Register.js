@@ -9,7 +9,6 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: '',
     role: 'student',
     department: '',
     phone: '',
@@ -27,7 +26,6 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -66,12 +64,6 @@ const Register = () => {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
     if (!formData.department.trim()) {
       newErrors.department = 'Department is required';
     }
@@ -86,7 +78,7 @@ const Register = () => {
       newErrors.studentId = 'Student ID is required';
     }
 
-    if (formData.role === 'faculty' && !formData.employeeId.trim()) {
+    if ((formData.role === 'faculty' || formData.role === 'technician') && !formData.employeeId.trim()) {
       newErrors.employeeId = 'Employee ID is required';
     }
 
@@ -136,21 +128,28 @@ const Register = () => {
                 className={`role-option ${formData.role === 'student' ? 'active' : ''}`}
                 onClick={() => handleRoleChange('student')}
               >
-                <input type="radio" name="role" value="student" />
+                <input type="radio" name="role" value="student" checked={formData.role === 'student'} readOnly />
                 Student
               </div>
               <div
                 className={`role-option ${formData.role === 'faculty' ? 'active' : ''}`}
                 onClick={() => handleRoleChange('faculty')}
               >
-                <input type="radio" name="role" value="faculty" />
+                <input type="radio" name="role" value="faculty" checked={formData.role === 'faculty'} readOnly />
                 Faculty
+              </div>
+              <div
+                className={`role-option ${formData.role === 'technician' ? 'active' : ''}`}
+                onClick={() => handleRoleChange('technician')}
+              >
+                <input type="radio" name="role" value="technician" checked={formData.role === 'technician'} readOnly />
+                Technician
               </div>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Full Name</label>
+            <label className="form-label required">Full Name</label>
             <input
               type="text"
               name="name"
@@ -164,7 +163,7 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label className="form-label required">Email Address</label>
             <input
               type="email"
               name="email"
@@ -178,35 +177,21 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label required">Password</label>
             <input
               type="password"
               name="password"
               className={`form-control ${errors.password ? 'error' : ''}`}
               value={formData.password}
               onChange={handleChange}
-              placeholder="Create a password"
+              placeholder="Create a password (min 6 characters)"
               disabled={loading}
             />
             {errors.password && <div className="form-error">{errors.password}</div>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              className={`form-control ${errors.confirmPassword ? 'error' : ''}`}
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm your password"
-              disabled={loading}
-            />
-            {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Department</label>
+            <label className="form-label required">Department</label>
             <input
               type="text"
               name="department"
@@ -220,7 +205,7 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Phone Number</label>
+            <label className="form-label required">Phone Number</label>
             <input
               type="tel"
               name="phone"
@@ -229,13 +214,14 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Enter 10-digit phone number"
               disabled={loading}
+              maxLength="10"
             />
             {errors.phone && <div className="form-error">{errors.phone}</div>}
           </div>
 
           {formData.role === 'student' && (
             <div className="form-group">
-              <label className="form-label">Student ID</label>
+              <label className="form-label required">Student ID</label>
               <input
                 type="text"
                 name="studentId"
@@ -249,9 +235,9 @@ const Register = () => {
             </div>
           )}
 
-          {formData.role === 'faculty' && (
+          {(formData.role === 'faculty' || formData.role === 'technician') && (
             <div className="form-group">
-              <label className="form-label">Employee ID</label>
+              <label className="form-label required">Employee ID</label>
               <input
                 type="text"
                 name="employeeId"

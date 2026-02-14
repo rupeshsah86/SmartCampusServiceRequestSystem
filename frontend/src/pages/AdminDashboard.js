@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, requestAPI } from '../services/api';
 import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError } from '../utils/helpers';
+import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import '../styles/admin.css';
 
 const AdminDashboard = () => {
@@ -13,6 +14,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedRequests, setSelectedRequests] = useState([]);
+  const [assignModal, setAssignModal] = useState(false);
+  const [technicians, setTechnicians] = useState([]);
+  const [selectedTechnician, setSelectedTechnician] = useState('');
   const [filters, setFilters] = useState({
     status: '',
     category: '',
@@ -78,6 +82,37 @@ const AdminDashboard = () => {
     } catch (err) {
       setError(handleApiError(err));
     }
+  };
+
+  const fetchTechnicians = async () => {
+    try {
+      const response = await adminAPI.getTechnicians();
+      setTechnicians(response.data.data.technicians);
+    } catch (err) {
+      console.error('Error fetching technicians:', err);
+    }
+  };
+
+  const handleAssignTechnician = async () => {
+    if (!selectedTechnician || selectedRequests.length === 0) return;
+    
+    try {
+      await adminAPI.bulkUpdate({
+        requestIds: selectedRequests,
+        updates: { assignedTo: selectedTechnician }
+      });
+      setAssignModal(false);
+      setSelectedTechnician('');
+      setSelectedRequests([]);
+      fetchRequests();
+    } catch (err) {
+      setError(handleApiError(err));
+    }
+  };
+
+  const openAssignModal = () => {
+    fetchTechnicians();
+    setAssignModal(true);
   };
 
   const handleBulkUpdate = async (updates) => {
@@ -146,41 +181,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="row">
-            <div className="col-6">
-              <div className="chart-container">
-                <div className="chart-header">
-                  <h3 className="chart-title">Status Distribution</h3>
-                </div>
-                <div className="p-3">
-                  {stats.statusDistribution.map(item => (
-                    <div key={item._id} className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="badge" style={{ backgroundColor: getStatusColor(item._id), color: 'white' }}>
-                        {formatStatus(item._id)}
-                      </span>
-                      <strong>{item.count}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="col-6">
-              <div className="chart-container">
-                <div className="chart-header">
-                  <h3 className="chart-title">Category Distribution</h3>
-                </div>
-                <div className="p-3">
-                  {stats.categoryDistribution.map(item => (
-                    <div key={item._id} className="d-flex justify-content-between align-items-center mb-2">
-                      <span>{item._id.replace('_', ' ').toUpperCase()}</span>
-                      <strong>{item.count}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <AdvancedAnalytics stats={stats} />
         </>
       ) : null}
     </div>
@@ -261,6 +262,12 @@ const AdminDashboard = () => {
               onClick={() => setSelectedRequests([])}
             >
               Clear Selection
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={openAssignModal}
+            >
+              Assign Technician
             </button>
           </div>
         </div>
@@ -469,6 +476,58 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Assign Technician Modal */}
+      {assignModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Assign Technician</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setAssignModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <p>Assign {selectedRequests.length} selected request(s) to:</p>
+              <div className="form-group">
+                <label>Select Technician</label>
+                <select
+                  value={selectedTechnician}
+                  onChange={(e) => setSelectedTechnician(e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">Choose a technician...</option>
+                  {technicians.map(tech => (
+                    <option key={tech._id} value={tech._id}>
+                      {tech.name} - {tech.department}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setAssignModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={handleAssignTechnician}
+                disabled={!selectedTechnician}
+              >
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

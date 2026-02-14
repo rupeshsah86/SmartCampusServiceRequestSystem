@@ -44,9 +44,27 @@ const serviceRequestSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Location cannot exceed 100 characters']
   },
-  assignedTo: {
+  attachments: [{
+    filename: String,
+    originalName: String,
+    mimetype: String,
+    size: Number,
+    path: String,
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  aiSuggestion: {
+    category: String,
+    confidence: Number,
+    priority: String
+  },
+  urgencyLevel: {
     type: String,
-    trim: true
+    enum: ['normal', 'urgent', 'emergency'],
+    default: 'normal'
+  },
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   adminRemarks: {
     type: String,

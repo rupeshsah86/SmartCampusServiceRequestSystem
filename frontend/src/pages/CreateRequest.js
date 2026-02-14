@@ -14,6 +14,8 @@ const CreateRequest = () => {
     priority: 'medium',
     location: ''
   });
+  const [files, setFiles] = useState([]);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -39,7 +41,6 @@ const CreateRequest = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -53,6 +54,20 @@ const CreateRequest = () => {
       ...prev,
       priority
     }));
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length > 5) {
+      setErrors({ files: 'Maximum 5 files allowed' });
+      return;
+    }
+    setFiles(selectedFiles);
+    setErrors(prev => ({ ...prev, files: '' }));
+  };
+
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
@@ -97,7 +112,23 @@ const CreateRequest = () => {
 
     setLoading(true);
     try {
-      await requestAPI.create(formData);
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('priority', formData.priority);
+      formDataToSend.append('location', formData.location);
+      
+      files.forEach(file => {
+        formDataToSend.append('attachments', file);
+      });
+
+      const response = await requestAPI.create(formDataToSend);
+      
+      if (response.data.data.aiSuggestion) {
+        setAiSuggestion(response.data.data.aiSuggestion);
+      }
+      
       setSuccess(true);
       setTimeout(() => {
         navigate('/dashboard');
@@ -116,7 +147,15 @@ const CreateRequest = () => {
           <div className="form-card">
             <div className="form-success">
               <h2>✅ Request Submitted Successfully!</h2>
-              <p>Your service request has been created and assigned a unique ID. You will be redirected to your dashboard shortly.</p>
+              <p>Your service request has been created and assigned a unique ID.</p>
+              {aiSuggestion && (
+                <div className="ai-suggestion-result">
+                  <p><strong>AI Analysis:</strong></p>
+                  <p>Suggested Category: {aiSuggestion.category} ({aiSuggestion.confidence}% confidence)</p>
+                  <p>Suggested Priority: {aiSuggestion.priority}</p>
+                </div>
+              )}
+              <p>Redirecting to dashboard...</p>
             </div>
           </div>
         </div>
@@ -218,6 +257,31 @@ const CreateRequest = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="form-group">
+                <label className="form-label">Attachments (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  onChange={handleFileChange}
+                  className="form-control"
+                  disabled={loading}
+                />
+                <small className="form-help">Upload images or PDF files (Max 5 files, 5MB each)</small>
+                {errors.files && <div className="form-error">{errors.files}</div>}
+                
+                {files.length > 0 && (
+                  <div className="file-list">
+                    {files.map((file, index) => (
+                      <div key={index} className="file-item">
+                        <span>{file.name}</span>
+                        <button type="button" onClick={() => removeFile(index)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="form-section">
@@ -234,7 +298,7 @@ const CreateRequest = () => {
                       name="priority"
                       value={priority.value}
                       checked={formData.priority === priority.value}
-                      onChange={() => {}}
+                      readOnly
                     />
                     <div className="priority-label">{priority.label}</div>
                     <div className="priority-desc">{priority.desc}</div>

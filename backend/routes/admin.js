@@ -4,7 +4,8 @@ const {
   getFilteredRequests,
   bulkUpdateRequests,
   getUserManagement,
-  toggleUserStatus
+  toggleUserStatus,
+  getTechnicians
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 const {
@@ -29,5 +30,6 @@ router.put('/requests/bulk-update', bulkUpdateValidation, bulkUpdateRequests);
 // User management
 router.get('/users', getUserManagement);
 router.put('/users/:userId/toggle-status', userIdValidation, toggleUserStatus);
+router.get('/technicians', getTechnicians);
 
 module.exports = router;

@@ -286,10 +286,23 @@ const toggleUserStatus = asyncHandler(async (req, res) => {
   });
 });
 
+// Get technicians for assignment
+const getTechnicians = asyncHandler(async (req, res) => {
+  const technicians = await User.find({ 
+    role: 'technician', 
+    isActive: true 
+  }).select('name email department');
+
+  sendResponse(res, 200, true, 'Technicians retrieved successfully', {
+    technicians
+  });
+});
+
 module.exports = {
   getDashboardStats,
   getFilteredRequests,
   bulkUpdateRequests,
   getUserManagement,
-  toggleUserStatus
+  toggleUserStatus,
+  getTechnicians
 };

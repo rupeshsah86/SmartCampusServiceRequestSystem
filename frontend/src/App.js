@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
+import TechnicianDashboard from './pages/TechnicianDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import CreateRequest from './pages/CreateRequest';
 import RequestDetails from './pages/RequestDetails';
@@ -133,6 +134,10 @@ const DashboardRouter = () => {
   
   if (user?.role === 'admin') {
     return <AdminDashboard />;
+  }
+  
+  if (user?.role === 'technician') {
+    return <TechnicianDashboard />;
   }
   
   return <StudentDashboard />;

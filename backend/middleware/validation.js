@@ -16,8 +16,8 @@ const registerValidation = [
     .withMessage('Password must be at least 6 characters long'),
   
   body('role')
-    .isIn(['student', 'faculty', 'admin'])
-    .withMessage('Role must be student, faculty, or admin'),
+    .isIn(['student', 'faculty', 'admin', 'technician'])
+    .withMessage('Role must be student, faculty, admin, or technician'),
   
   body('department')
     .trim()

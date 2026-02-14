@@ -3,12 +3,20 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const path = require('path');
+const fs = require('fs');
 const { sanitizeInput, mongoSanitize, createRateLimit } = require('./middleware/security');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
 
 const app = express();
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 
 // Connect to MongoDB
 connectDB();
@@ -46,6 +54,9 @@ app.use('/api/auth/register', authLimiter);
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Security middleware
 app.use(mongoSanitize());

@@ -131,7 +131,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Category</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     {request.category.replace('_', ' ').toUpperCase()}
                   </div>
                 </div>
@@ -139,7 +139,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Location</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     📍 {request.location}
                   </div>
                 </div>
@@ -148,7 +148,7 @@ const RequestDetails = () => {
 
             <div className="form-group">
               <label className="form-label">Description</label>
-              <div className="form-control form-textarea" style={{ backgroundColor: '#f8f9fa', minHeight: '120px' }}>
+              <div className="form-control form-textarea" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)', minHeight: '120px' }}>
                 {request.description}
               </div>
             </div>
@@ -157,7 +157,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Submitted By</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     {request.userId.name} ({request.userId.email})
                   </div>
                 </div>
@@ -165,7 +165,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Department</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     {request.userId.department}
                   </div>
                 </div>
@@ -176,7 +176,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Created Date</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     📅 {formatDate(request.createdAt)}
                   </div>
                 </div>
@@ -184,7 +184,7 @@ const RequestDetails = () => {
               <div className="col-6">
                 <div className="form-group">
                   <label className="form-label">Last Updated</label>
-                  <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                  <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                     🔄 {formatDate(request.updatedAt)}
                   </div>
                 </div>
@@ -194,7 +194,11 @@ const RequestDetails = () => {
             {request.assignedTo && (
               <div className="form-group">
                 <label className="form-label">Assigned To</label>
-                <div className="form-control" style={{ backgroundColor: '#e3f2fd' }}>
+                <div className="form-control" style={{ 
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                  color: 'var(--color-primary-700)', 
+                  border: '1px solid rgba(59, 130, 246, 0.2)' 
+                }}>
                   👤 {request.assignedTo}
                 </div>
               </div>
@@ -203,7 +207,12 @@ const RequestDetails = () => {
             {request.adminRemarks && (
               <div className="form-group">
                 <label className="form-label">Admin Remarks</label>
-                <div className="form-control form-textarea" style={{ backgroundColor: '#fff3cd', minHeight: '80px' }}>
+                <div className="form-control form-textarea" style={{ 
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                  color: 'var(--color-warning)', 
+                  border: '1px solid rgba(245, 158, 11, 0.2)', 
+                  minHeight: '80px' 
+                }}>
                   {request.adminRemarks}
                 </div>
               </div>
@@ -212,7 +221,12 @@ const RequestDetails = () => {
             {request.resolutionNotes && (
               <div className="form-group">
                 <label className="form-label">Resolution Notes</label>
-                <div className="form-control form-textarea" style={{ backgroundColor: '#d4edda', minHeight: '80px' }}>
+                <div className="form-control form-textarea" style={{ 
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                  color: 'var(--color-success)', 
+                  border: '1px solid rgba(16, 185, 129, 0.2)', 
+                  minHeight: '80px' 
+                }}>
                   {request.resolutionNotes}
                 </div>
               </div>
@@ -221,7 +235,11 @@ const RequestDetails = () => {
             {request.resolvedAt && (
               <div className="form-group">
                 <label className="form-label">Resolved Date</label>
-                <div className="form-control" style={{ backgroundColor: '#d4edda' }}>
+                <div className="form-control" style={{ 
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                  color: 'var(--color-success)', 
+                  border: '1px solid rgba(16, 185, 129, 0.2)' 
+                }}>
                   ✅ {formatDate(request.resolvedAt)}
                 </div>
               </div>
@@ -230,7 +248,7 @@ const RequestDetails = () => {
             {request.closedAt && (
               <div className="form-group">
                 <label className="form-label">Closed Date</label>
-                <div className="form-control" style={{ backgroundColor: '#f8f9fa' }}>
+                <div className="form-control" style={{ backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
                   🔒 {formatDate(request.closedAt)}
                 </div>
               </div>

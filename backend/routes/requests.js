@@ -8,6 +8,7 @@ const {
   deleteRequest
 } = require('../controllers/requestController');
 const { protect, authorize } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
   createRequestValidation,
   updateStatusValidation,
@@ -20,7 +21,7 @@ const router = express.Router();
 router.use(protect);
 
 // User routes (students, faculty, admin)
-router.post('/', createRequestValidation, createRequest);
+router.post('/', upload.array('attachments', 5), createRequestValidation, createRequest);
 router.get('/my-requests', getUserRequests);
 router.get('/:id', requestIdValidation, getRequestById);
 router.delete('/:id', requestIdValidation, deleteRequest);

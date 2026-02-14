@@ -1,6 +1,8 @@
 const ServiceRequest = require('../models/ServiceRequest');
 const { createNotification } = require('./notificationController');
 const { generateRequestId, sendResponse, asyncHandler } = require('../utils/helpers');
+const { sendEmail, emailTemplates } = require('../utils/emailService');
+const { categorizeIssue, determinePriority } = require('../utils/aiCategorization');
 const { validationResult } = require('express-validator');
 
 // Create service request
@@ -12,20 +14,50 @@ const createRequest = asyncHandler(async (req, res) => {
 
   const { title, description, category, priority, location } = req.body;
 
+  // AI-based categorization
+  const aiSuggestion = categorizeIssue(title, description);
+  const aiPriority = determinePriority(title, description);
+
   const requestData = {
     requestId: generateRequestId(),
     userId: req.user._id,
     title,
     description,
-    category,
-    priority: priority || 'medium',
-    location
+    category: category || aiSuggestion.category,
+    priority: priority || aiPriority,
+    location,
+    aiSuggestion: {
+      category: aiSuggestion.category,
+      confidence: aiSuggestion.confidence,
+      priority: aiPriority
+    }
   };
+
+  // Handle file uploads
+  if (req.files && req.files.length > 0) {
+    requestData.attachments = req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path
+    }));
+  }
 
   const serviceRequest = await ServiceRequest.create(requestData);
   await serviceRequest.populate('userId', 'name email department');
 
-  sendResponse(res, 201, true, 'Service request created successfully', serviceRequest);
+  // Send email notification
+  await sendEmail(
+    serviceRequest.userId.email,
+    'Service Request Created',
+    emailTemplates.requestCreated(serviceRequest.userId, serviceRequest)
+  );
+
+  sendResponse(res, 201, true, 'Service request created successfully', {
+    request: serviceRequest,
+    aiSuggestion: aiSuggestion
+  });
 });
 
 // Get user's service requests

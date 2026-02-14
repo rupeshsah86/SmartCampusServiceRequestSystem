@@ -366,3 +366,54 @@
     font-size: 36px;
   }
 }
+
+
+/* File List */
+.file-list {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.file-item button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-item button:hover {
+  background: #c82333;
+}
+
+.ai-suggestion-result {
+  margin-top: 15px;
+  padding: 15px;
+  background: #e7f3ff;
+  border-left: 4px solid #007bff;
+  border-radius: 6px;
+}
+
+.ai-suggestion-result p {
+  margin: 5px 0;
+  font-size: 14px;
+}

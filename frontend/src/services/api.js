@@ -21,19 +21,8 @@ api.interceptors.request.use((config) => {
 
 // Handle responses and errors
 api.interceptors.response.use(
-  (response) => {
-    console.log('API Response:', response.config.url, response.status, response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    });
-    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -45,20 +34,19 @@ api.interceptors.response.use(
 
 // Auth API calls
 export const authAPI = {
-  register: (userData) => {
-    console.log('Registering user:', userData);
-    return api.post('/auth/register', userData);
-  },
-  login: (credentials) => {
-    console.log('Logging in user:', credentials.email);
-    return api.post('/auth/login', credentials);
-  },
+  register: (userData) => api.post('/auth/register', userData),
+  login: (credentials) => api.post('/auth/login', credentials),
   getProfile: () => api.get('/auth/profile'),
 };
 
 // Request API calls
 export const requestAPI = {
-  create: (requestData) => api.post('/requests', requestData),
+  create: (requestData) => {
+    const config = requestData instanceof FormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    } : {};
+    return api.post('/requests', requestData, config);
+  },
   getMyRequests: (params) => api.get('/requests/my-requests', { params }),
   getAllRequests: (params) => api.get('/requests', { params }),
   getById: (id) => api.get(`/requests/${id}`),
@@ -73,6 +61,7 @@ export const adminAPI = {
   bulkUpdate: (data) => api.put('/admin/requests/bulk-update', data),
   getUsers: (params) => api.get('/admin/users', { params }),
   toggleUserStatus: (userId) => api.put(`/admin/users/${userId}/toggle-status`),
+  getTechnicians: () => api.get('/admin/technicians'),
 };
 
 export default api;

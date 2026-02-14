@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'faculty', 'admin'],
+    enum: ['student', 'faculty', 'admin', 'technician'],
     default: 'student'
   },
   department: {
@@ -35,6 +35,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Phone number is required'],
     match: [/^\d{10}$/, 'Phone number must be 10 digits']
+  },
+  profilePicture: {
+    type: String,
+    default: ''
+  },
+  lastLogin: {
+    type: Date
   },
   studentId: {
     type: String,
