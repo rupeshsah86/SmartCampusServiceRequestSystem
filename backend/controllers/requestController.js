@@ -89,18 +89,27 @@ const getUserRequests = asyncHandler(async (req, res) => {
   });
 });
 
-// Get all service requests (Admin only)
+// Get all service requests (Admin and Technician)
 const getAllRequests = asyncHandler(async (req, res) => {
-  const { status, category, priority, page = 1, limit = 10, search } = req.query;
+  const { status, category, priority, page = 1, limit = 10, search, assignedTo } = req.query;
   
   const filter = {};
+  
+  // Technicians can only see their assigned requests
+  if (req.user.role === 'technician') {
+    filter.assignedTo = req.user._id;
+  }
+  
+  // Apply filters
+  if (assignedTo) filter.assignedTo = assignedTo;
   if (status) filter.status = status;
   if (category) filter.category = category;
   if (priority) filter.priority = priority;
   if (search) {
     filter.$or = [
       { title: { $regex: search, $options: 'i' } },
-      { requestId: { $regex: search, $options: 'i' } }
+      { requestId: { $regex: search, $options: 'i' } },
+      { location: { $regex: search, $options: 'i' } }
     ];
   }
 
@@ -108,13 +117,14 @@ const getAllRequests = asyncHandler(async (req, res) => {
   
   const requests = await ServiceRequest.find(filter)
     .populate('userId', 'name email department role')
+    .populate('assignedTo', 'name email department')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(parseInt(limit));
 
   const total = await ServiceRequest.countDocuments(filter);
 
-  sendResponse(res, 200, true, 'All requests retrieved successfully', {
+  sendResponse(res, 200, true, 'Requests retrieved successfully', {
     requests,
     pagination: {
       current: parseInt(page),
@@ -133,7 +143,10 @@ const getRequestById = asyncHandler(async (req, res) => {
   }
 
   const request = await ServiceRequest.findById(req.params.id)
-    .populate('userId', 'name email department role phone');
+    .populate('userId', 'name email department role phone')
+    .populate('assignedTo', 'name email department')
+    .populate('workNotes.addedBy', 'name role')
+    .populate('activityLogs.performedBy', 'name role');
 
   if (!request) {
     return sendResponse(res, 404, false, 'Service request not found');
@@ -147,51 +160,101 @@ const getRequestById = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, 'Request retrieved successfully', request);
 });
 
-// Update service request status (Admin only)
+// Update service request status (Admin and Technician)
 const updateRequestStatus = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return sendResponse(res, 400, false, 'Validation failed', errors.array());
   }
 
-  const { status, adminRemarks, resolutionNotes, assignedTo } = req.body;
+  const { status, adminRemarks, resolutionNotes, assignedTo, workNote } = req.body;
 
   const request = await ServiceRequest.findById(req.params.id);
   if (!request) {
     return sendResponse(res, 404, false, 'Service request not found');
+  }
+  
+  // Technicians can only update their assigned requests
+  if (req.user.role === 'technician') {
+    if (!request.assignedTo || request.assignedTo.toString() !== req.user._id.toString()) {
+      return sendResponse(res, 403, false, 'You can only update requests assigned to you');
+    }
+    if (assignedTo) {
+      return sendResponse(res, 403, false, 'Technicians cannot assign requests');
+    }
   }
 
   // Validate status transition
   const validTransitions = {
     pending: ['in_progress', 'closed'],
     in_progress: ['resolved', 'pending'],
-    resolved: ['closed', 'in_progress'],
-    closed: []
+    resolved: ['closed', 'reopened'], // User confirms or rejects
+    reopened: ['in_progress'], // Technician picks up again
+    closed: [] // Locked
   };
 
   if (!validTransitions[request.status].includes(status)) {
     return sendResponse(res, 400, false, `Cannot change status from ${request.status} to ${status}`);
   }
+  
+  // Prevent editing locked tickets
+  if (request.isLocked) {
+    return sendResponse(res, 400, false, 'Cannot modify closed ticket');
+  }
+
+  // Add work note if provided
+  if (workNote && workNote.trim()) {
+    request.workNotes.push({
+      note: workNote,
+      addedBy: req.user._id
+    });
+  }
+  
+  // Handle proof of work uploads
+  if (req.files && req.files.length > 0) {
+    const proofFiles = req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path,
+      uploadedBy: req.user._id
+    }));
+    request.proofOfWork.push(...proofFiles);
+  }
 
   // Update request
+  const oldStatus = request.status;
   request.status = status;
   if (adminRemarks) request.adminRemarks = adminRemarks;
   if (resolutionNotes) request.resolutionNotes = resolutionNotes;
-  if (assignedTo) request.assignedTo = assignedTo;
+  if (assignedTo && req.user.role === 'admin') request.assignedTo = assignedTo;
+
+  // Add activity log
+  request.activityLogs.push({
+    action: `Status changed from ${oldStatus} to ${status}`,
+    performedBy: req.user._id,
+    details: workNote || resolutionNotes || `Status updated by ${req.user.role}`
+  });
 
   // Set timestamps
   if (status === 'resolved') {
     request.resolvedAt = new Date();
-    // Create notification for feedback request
     await createNotification(
       request.userId,
       request._id,
-      'feedback_request',
-      'Request Resolved - Feedback Requested',
-      `Your request "${request.title}" has been resolved. Please provide feedback.`
+      'resolution_pending',
+      'Request Resolved - Please Confirm',
+      `Your request "${request.title}" has been resolved. Please review and confirm.`
     );
   }
   if (status === 'closed') request.closedAt = new Date();
+  
+  // Handle reopened status
+  if (status === 'reopened') {
+    request.reopenedCount += 1;
+    request.resolvedAt = null;
+  }
 
   // Create notification for status update
   if (request.status !== status) {
@@ -206,6 +269,8 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
 
   await request.save();
   await request.populate('userId', 'name email department');
+  await request.populate('workNotes.addedBy', 'name role');
+  await request.populate('activityLogs.performedBy', 'name role');
 
   sendResponse(res, 200, true, 'Request status updated successfully', request);
 });
@@ -235,11 +300,104 @@ const deleteRequest = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, 'Service request deleted successfully');
 });
 
+// Confirm resolution (User accepts/rejects)
+const confirmResolution = asyncHandler(async (req, res) => {
+  const { action } = req.body; // 'accept' or 'reject'
+  
+  const request = await ServiceRequest.findById(req.params.id)
+    .populate('userId', 'name email')
+    .populate('assignedTo', 'name email')
+    .populate('workNotes.addedBy', 'name role')
+    .populate('activityLogs.performedBy', 'name role');
+    
+  if (!request) {
+    return sendResponse(res, 404, false, 'Service request not found');
+  }
+  
+  // Only request creator can confirm
+  if (request.userId._id.toString() !== req.user._id.toString()) {
+    return sendResponse(res, 403, false, 'Only request creator can confirm resolution');
+  }
+  
+  // Must be in resolved status
+  if (request.status !== 'resolved') {
+    return sendResponse(res, 400, false, 'Request must be in resolved status');
+  }
+  
+  if (action === 'accept') {
+    // Accept resolution - Close ticket
+    request.status = 'closed';
+    request.closedAt = new Date();
+    request.isLocked = true;
+    
+    // Calculate resolution time
+    if (request.resolvedAt && request.createdAt) {
+      request.resolutionTime = Math.round((request.resolvedAt - request.createdAt) / (1000 * 60));
+    }
+    
+    // Add activity log
+    request.activityLogs.push({
+      action: 'Resolution Accepted',
+      performedBy: req.user._id,
+      details: 'User confirmed resolution and closed ticket'
+    });
+    
+    // Notify technician
+    if (request.assignedTo) {
+      await createNotification(
+        request.assignedTo._id,
+        request._id,
+        'resolution_accepted',
+        'Resolution Accepted',
+        `User accepted your resolution for "${request.title}"`
+      );
+    }
+    
+    await request.save();
+    await request.populate('workNotes.addedBy', 'name role');
+    await request.populate('activityLogs.performedBy', 'name role');
+    sendResponse(res, 200, true, 'Resolution accepted. Ticket closed successfully', request);
+    
+  } else if (action === 'reject') {
+    // Reject resolution - Reopen ticket
+    request.status = 'reopened';
+    request.reopenedCount += 1;
+    request.resolvedAt = null;
+    
+    // Add activity log
+    request.activityLogs.push({
+      action: 'Resolution Rejected',
+      performedBy: req.user._id,
+      details: 'User rejected resolution and reopened ticket'
+    });
+    
+    // Notify technician
+    if (request.assignedTo) {
+      await createNotification(
+        request.assignedTo._id,
+        request._id,
+        'resolution_rejected',
+        'Resolution Rejected - Ticket Reopened',
+        `User rejected your resolution for "${request.title}". Please review.`
+      );
+    }
+    
+    await request.save();
+    await request.populate('workNotes.addedBy', 'name role');
+    await request.populate('activityLogs.performedBy', 'name role');
+    sendResponse(res, 200, true, 'Resolution rejected. Ticket reopened', request);
+    
+  } else {
+    return sendResponse(res, 400, false, 'Invalid action. Use "accept" or "reject"');
+  }
+});
+
 module.exports = {
   createRequest,
   getUserRequests,
   getAllRequests,
   getRequestById,
   updateRequestStatus,
-  deleteRequest
+  deleteRequest,
+  confirmResolution
 };

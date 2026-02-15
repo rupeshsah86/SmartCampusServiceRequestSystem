@@ -298,11 +298,63 @@ const getTechnicians = asyncHandler(async (req, res) => {
   });
 });
 
+// Get technician performance stats
+const getTechnicianPerformance = asyncHandler(async (req, res) => {
+  const technicians = await User.find({ role: 'technician', isActive: true }).select('name email department');
+  
+  const performanceData = await Promise.all(
+    technicians.map(async (tech) => {
+      const totalResolved = await ServiceRequest.countDocuments({ 
+        assignedTo: tech._id, 
+        status: { $in: ['resolved', 'closed'] }
+      });
+      
+      const reopenedCount = await ServiceRequest.countDocuments({ 
+        assignedTo: tech._id, 
+        reopenedCount: { $gt: 0 }
+      });
+      
+      const avgResolutionTime = await ServiceRequest.aggregate([
+        { 
+          $match: { 
+            assignedTo: tech._id, 
+            resolutionTime: { $exists: true } 
+          } 
+        },
+        { 
+          $group: { 
+            _id: null, 
+            avgTime: { $avg: '$resolutionTime' } 
+          } 
+        }
+      ]);
+      
+      return {
+        technician: {
+          id: tech._id,
+          name: tech.name,
+          email: tech.email,
+          department: tech.department
+        },
+        stats: {
+          totalResolved,
+          reopenedCount,
+          avgResolutionTime: avgResolutionTime[0]?.avgTime || 0,
+          successRate: totalResolved > 0 ? ((totalResolved - reopenedCount) / totalResolved * 100).toFixed(2) : 0
+        }
+      };
+    })
+  );
+  
+  sendResponse(res, 200, true, 'Technician performance retrieved successfully', { performanceData });
+});
+
 module.exports = {
   getDashboardStats,
   getFilteredRequests,
   bulkUpdateRequests,
   getUserManagement,
   toggleUserStatus,
-  getTechnicians
+  getTechnicians,
+  getTechnicianPerformance
 };

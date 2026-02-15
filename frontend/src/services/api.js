@@ -51,6 +51,7 @@ export const requestAPI = {
   getAllRequests: (params) => api.get('/requests', { params }),
   getById: (id) => api.get(`/requests/${id}`),
   updateStatus: (id, data) => api.put(`/requests/${id}/status`, data),
+  confirmResolution: (id, action) => api.put(`/requests/${id}/confirm`, { action }),
   delete: (id) => api.delete(`/requests/${id}`),
 };
 
@@ -62,6 +63,7 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   toggleUserStatus: (userId) => api.put(`/admin/users/${userId}/toggle-status`),
   getTechnicians: () => api.get('/admin/technicians'),
+  getTechnicianPerformance: () => api.get('/admin/technicians/performance'),
 };
 
 export default api;

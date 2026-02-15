@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/navbar.css';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -13,22 +15,51 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
+  const handleHomeClick = (e) => {
+    e.preventDefault();
+    if (location.pathname !== '/') {
+      navigate('/');
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    closeMenu();
+  };
+
+  const handleSectionClick = (e, sectionId) => {
+    e.preventDefault();
+    if (location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    closeMenu();
+  };
+
   return (
     <nav className="navbar">
       <div className="container">
         <div className="navbar-content">
           {/* Logo */}
-          <Link to="/" className="navbar-logo" onClick={closeMenu}>
+          <Link to="/" className="navbar-logo" onClick={handleHomeClick}>
             <span className="logo-icon">🎓</span>
             <span className="logo-text">Smart Campus</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="navbar-menu">
-            <Link to="/" className="navbar-link">Home</Link>
-            <a href="#features" className="navbar-link">Features</a>
-            <a href="#how-it-works" className="navbar-link">How It Works</a>
-            <a href="#contact" className="navbar-link">Contact</a>
+            <a href="/" className="navbar-link" onClick={handleHomeClick}>Home</a>
+            <a href="#features" className="navbar-link" onClick={(e) => handleSectionClick(e, 'features')}>Features</a>
+            <a href="#how-it-works" className="navbar-link" onClick={(e) => handleSectionClick(e, 'how-it-works')}>How It Works</a>
+            <a href="#contact" className="navbar-link" onClick={(e) => handleSectionClick(e, 'contact')}>Contact</a>
             <Link to="/login" className="navbar-link navbar-login">Login</Link>
             <Link to="/register" className="navbar-btn">Get Started</Link>
           </div>
@@ -47,16 +78,16 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         <div className={`navbar-mobile ${isMenuOpen ? 'active' : ''}`}>
-          <Link to="/" className="navbar-mobile-link" onClick={closeMenu}>
+          <a href="/" className="navbar-mobile-link" onClick={handleHomeClick}>
             Home
-          </Link>
-          <a href="#features" className="navbar-mobile-link" onClick={closeMenu}>
+          </a>
+          <a href="#features" className="navbar-mobile-link" onClick={(e) => handleSectionClick(e, 'features')}>
             Features
           </a>
-          <a href="#how-it-works" className="navbar-mobile-link" onClick={closeMenu}>
+          <a href="#how-it-works" className="navbar-mobile-link" onClick={(e) => handleSectionClick(e, 'how-it-works')}>
             How It Works
           </a>
-          <a href="#contact" className="navbar-mobile-link" onClick={closeMenu}>
+          <a href="#contact" className="navbar-mobile-link" onClick={(e) => handleSectionClick(e, 'contact')}>
             Contact
           </a>
           <Link to="/login" className="navbar-mobile-link" onClick={closeMenu}>

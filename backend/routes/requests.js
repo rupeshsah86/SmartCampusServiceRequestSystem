@@ -5,7 +5,8 @@ const {
   getAllRequests,
   getRequestById,
   updateRequestStatus,
-  deleteRequest
+  deleteRequest,
+  confirmResolution
 } = require('../controllers/requestController');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -25,9 +26,10 @@ router.post('/', upload.array('attachments', 5), createRequestValidation, create
 router.get('/my-requests', getUserRequests);
 router.get('/:id', requestIdValidation, getRequestById);
 router.delete('/:id', requestIdValidation, deleteRequest);
+router.put('/:id/confirm', requestIdValidation, confirmResolution); // User confirms resolution
 
-// Admin only routes
-router.get('/', authorize('admin'), getAllRequests);
-router.put('/:id/status', authorize('admin'), updateStatusValidation, updateRequestStatus);
+// Admin and Technician routes
+router.get('/', authorize('admin', 'technician'), getAllRequests);
+router.put('/:id/status', authorize('admin', 'technician'), upload.array('proofOfWork', 3), updateStatusValidation, updateRequestStatus);
 
 module.exports = router;

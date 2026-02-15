@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, requestAPI } from '../services/api';
-import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError } from '../utils/helpers';
+import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError, formatResolutionTime } from '../utils/helpers';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import '../styles/admin.css';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [techPerformance, setTechPerformance] = useState([]);
   const [stats, setStats] = useState(null);
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
@@ -32,6 +33,8 @@ const AdminDashboard = () => {
       fetchRequests();
     } else if (activeTab === 'users') {
       fetchUsers();
+    } else if (activeTab === 'performance') {
+      fetchTechnicianPerformance();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, filters]);
@@ -73,6 +76,19 @@ const AdminDashboard = () => {
       setError('');
     } catch (err) {
       console.error('Error fetching users:', err);
+      setError(handleApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTechnicianPerformance = async () => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getTechnicianPerformance();
+      setTechPerformance(response.data.data.performanceData || []);
+      setError('');
+    } catch (err) {
       setError(handleApiError(err));
     } finally {
       setLoading(false);
@@ -445,6 +461,105 @@ const AdminDashboard = () => {
     </div>
   );
 
+  const renderPerformance = () => (
+    <div className="tab-content">
+      <div className="requests-table">
+        <div className="table-header">
+          <h3 className="table-title">🏆 Technician Performance Metrics</h3>
+        </div>
+        
+        {loading ? (
+          <div className="text-center p-5">
+            <div className="spinner"></div>
+            <p>Loading performance data...</p>
+          </div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Technician</th>
+                <th>Department</th>
+                <th>Total Resolved</th>
+                <th>Reopened Count</th>
+                <th>Avg Resolution Time</th>
+                <th>Success Rate</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {techPerformance && techPerformance.length > 0 ? (
+                techPerformance.map((perf, idx) => {
+                  const successRate = parseFloat(perf.stats.successRate);
+                  const performanceColor = successRate >= 90 ? '#28a745' : successRate >= 75 ? '#ffc107' : '#dc3545';
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <div className="user-info-cell">
+                          <div className="user-name">{perf.technician.name}</div>
+                          <div className="user-email">{perf.technician.email}</div>
+                        </div>
+                      </td>
+                      <td>{perf.technician.department}</td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: '#007bff', color: 'white' }}>
+                          {perf.stats.totalResolved}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: perf.stats.reopenedCount > 0 ? '#dc3545' : '#6c757d', color: 'white' }}>
+                          {perf.stats.reopenedCount}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: '#17a2b8', color: 'white' }}>
+                          {formatResolutionTime(perf.stats.avgResolutionTime)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: performanceColor, color: 'white' }}>
+                          {successRate.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ 
+                            width: '100px', 
+                            height: '8px', 
+                            backgroundColor: '#e9ecef', 
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              width: `${successRate}%`,
+                              height: '100%',
+                              backgroundColor: performanceColor,
+                              transition: 'width 0.3s ease'
+                            }}></div>
+                          </div>
+                          <span style={{ fontSize: '20px' }}>
+                            {successRate >= 90 ? '🌟' : successRate >= 75 ? '👍' : '⚠️'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="7" className="empty-state">
+                    <div className="empty-state-icon">📊</div>
+                    <div className="empty-state-title">No Performance Data</div>
+                    <div className="empty-state-text">No technician performance data available</div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
@@ -492,11 +607,18 @@ const AdminDashboard = () => {
               >
                 👥 Users
               </button>
+              <button
+                className={`tab-button ${activeTab === 'performance' ? 'active' : ''}`}
+                onClick={() => setActiveTab('performance')}
+              >
+                🏆 Performance
+              </button>
             </div>
 
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'requests' && renderRequests()}
             {activeTab === 'users' && renderUsers()}
+            {activeTab === 'performance' && renderPerformance()}
           </div>
         </div>
       </div>

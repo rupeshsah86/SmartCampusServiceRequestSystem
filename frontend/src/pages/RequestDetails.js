@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestAPI } from '../services/api';
-import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError } from '../utils/helpers';
+import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError, formatResolutionTime } from '../utils/helpers';
+import Toast from '../components/Toast';
 import '../styles/forms.css';
 
 const RequestDetails = () => {
@@ -12,6 +13,8 @@ const RequestDetails = () => {
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
     fetchRequest();
@@ -39,6 +42,33 @@ const RequestDetails = () => {
       navigate('/dashboard');
     } catch (err) {
       setError(handleApiError(err));
+    }
+  };
+
+  const handleConfirmResolution = async (action) => {
+    const confirmMsg = action === 'accept' 
+      ? 'Are you sure you want to accept this resolution and close the ticket?'
+      : 'Are you sure you want to reject this resolution? The ticket will be reopened.';
+    
+    if (!window.confirm(confirmMsg)) return;
+    
+    try {
+      setConfirmLoading(true);
+      await requestAPI.confirmResolution(id, action);
+      setToast({
+        show: true,
+        message: action === 'accept' ? 'Resolution accepted! Ticket closed.' : 'Resolution rejected. Ticket reopened.',
+        type: 'success'
+      });
+      setTimeout(() => fetchRequest(), 1000);
+    } catch (err) {
+      setToast({
+        show: true,
+        message: handleApiError(err),
+        type: 'error'
+      });
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -253,6 +283,175 @@ const RequestDetails = () => {
                 </div>
               </div>
             )}
+
+            {request.resolutionTime && (
+              <div className="form-group">
+                <label className="form-label">Resolution Time</label>
+                <div className="form-control" style={{ 
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                  color: 'var(--color-primary-700)', 
+                  border: '1px solid rgba(59, 130, 246, 0.2)' 
+                }}>
+                  ⏱️ {formatResolutionTime(request.resolutionTime)}
+                </div>
+              </div>
+            )}
+
+            {request.reopenedCount > 0 && (
+              <div className="form-group">
+                <label className="form-label">Reopen History</label>
+                <div className="form-control" style={{ 
+                  backgroundColor: 'rgba(220, 53, 69, 0.1)', 
+                  color: '#dc3545', 
+                  border: '1px solid rgba(220, 53, 69, 0.2)' 
+                }}>
+                  🔄 Reopened {request.reopenedCount} time{request.reopenedCount > 1 ? 's' : ''}
+                </div>
+              </div>
+            )}
+
+            {request.isLocked && (
+              <div className="form-group">
+                <div className="form-control" style={{ 
+                  backgroundColor: 'rgba(108, 117, 125, 0.1)', 
+                  color: '#6c757d', 
+                  border: '1px solid rgba(108, 117, 125, 0.2)',
+                  textAlign: 'center',
+                  fontWeight: 'bold'
+                }}>
+                  🔒 This ticket is closed and locked. No further modifications allowed.
+                </div>
+              </div>
+            )}
+
+            {request.workNotes && request.workNotes.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">Work Notes</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {request.workNotes.map((note, idx) => (
+                    <div key={idx} style={{
+                      padding: '12px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      borderLeft: '3px solid #3b82f6',
+                      borderRadius: '4px'
+                    }}>
+                      <p style={{ margin: '0 0 8px 0', color: 'var(--color-text-primary)' }}>{note.note}</p>
+                      <small style={{ color: '#64748b' }}>
+                        👤 {note.addedBy?.name || 'Technician'} • {formatDate(note.addedAt)}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {request.proofOfWork && request.proofOfWork.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">Proof of Work</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {request.proofOfWork.map((file, idx) => (
+                    <div key={idx} style={{
+                      padding: '10px 15px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span>📎</span>
+                      <div>
+                        <div style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>
+                          {file.originalName}
+                        </div>
+                        <small style={{ color: '#64748b' }}>
+                          {formatDate(file.uploadedAt)}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {request.activityLogs && request.activityLogs.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">Activity Timeline</label>
+                <div style={{ position: 'relative', paddingLeft: '30px' }}>
+                  {request.activityLogs.map((log, idx) => (
+                    <div key={idx} style={{
+                      position: 'relative',
+                      paddingBottom: '20px',
+                      borderLeft: idx < request.activityLogs.length - 1 ? '2px solid #e2e8f0' : 'none'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: '-36px',
+                        top: '0',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: '#3b82f6',
+                        border: '2px solid white'
+                      }}></div>
+                      <div style={{
+                        padding: '10px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '6px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <div style={{ fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+                          {log.action}
+                        </div>
+                        {log.details && (
+                          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
+                            {log.details}
+                          </div>
+                        )}
+                        <small style={{ color: '#94a3b8' }}>
+                          👤 {log.performedBy?.name || 'System'} • {formatDate(log.timestamp)}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {request.status === 'resolved' && request.userId._id === user?._id && !request.isLocked && (
+              <div className="form-group">
+                <label className="form-label">Confirm Resolution</label>
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                  border: '2px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <p style={{ margin: '0 0 15px 0', color: 'var(--color-text-primary)', fontWeight: '500' }}>
+                    The technician has marked this request as resolved. Please review and confirm.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => handleConfirmResolution('accept')}
+                      disabled={confirmLoading}
+                      style={{ minWidth: '150px' }}
+                    >
+                      {confirmLoading ? '⏳ Processing...' : '✅ Accept Resolution'}
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleConfirmResolution('reject')}
+                      disabled={confirmLoading}
+                      style={{ minWidth: '150px' }}
+                    >
+                      {confirmLoading ? '⏳ Processing...' : '❌ Reject Resolution'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-actions">
@@ -280,6 +479,14 @@ const RequestDetails = () => {
           </div>
         </div>
       </div>
+
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ show: false, message: '', type: '' })}
+        />
+      )}
     </div>
   );
 };

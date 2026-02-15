@@ -17,6 +17,7 @@ export const formatStatus = (status) => {
     in_progress: 'In Progress',
     resolved: 'Resolved',
     closed: 'Closed',
+    reopened: 'Reopened',
   };
   return statusMap[status] || status;
 };
@@ -28,6 +29,7 @@ export const getStatusColor = (status) => {
     in_progress: '#17a2b8',
     resolved: '#28a745',
     closed: '#6c757d',
+    reopened: '#dc3545',
   };
   return colorMap[status] || '#6c757d';
 };
@@ -96,4 +98,12 @@ export const handleApiError = (error) => {
   
   // Generic error
   return error.message || 'An unexpected error occurred';
+};
+
+// Format resolution time
+export const formatResolutionTime = (minutes) => {
+  if (!minutes) return 'N/A';
+  if (minutes < 60) return `${Math.round(minutes)} mins`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)} hours`;
+  return `${Math.round(minutes / 1440)} days`;
 };

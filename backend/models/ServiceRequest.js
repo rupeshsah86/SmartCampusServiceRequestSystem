@@ -35,7 +35,7 @@ const serviceRequestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in_progress', 'resolved', 'closed'],
+    enum: ['pending', 'in_progress', 'resolved', 'closed', 'reopened'],
     default: 'pending'
   },
   location: {
@@ -66,6 +66,20 @@ const serviceRequestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  workNotes: [{
+    note: { type: String, required: true, maxlength: 500 },
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    addedAt: { type: Date, default: Date.now }
+  }],
+  proofOfWork: [{
+    filename: String,
+    originalName: String,
+    mimetype: String,
+    size: Number,
+    path: String,
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
   adminRemarks: {
     type: String,
     trim: true,
@@ -81,6 +95,23 @@ const serviceRequestSchema = new mongoose.Schema({
   },
   closedAt: {
     type: Date
+  },
+  resolutionTime: {
+    type: Number // in minutes
+  },
+  reopenedCount: {
+    type: Number,
+    default: 0
+  },
+  activityLogs: [{
+    action: { type: String, required: true },
+    performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    timestamp: { type: Date, default: Date.now },
+    details: String
+  }],
+  isLocked: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -88,6 +119,7 @@ const serviceRequestSchema = new mongoose.Schema({
 
 // Index for better query performance
 serviceRequestSchema.index({ userId: 1, status: 1 });
+serviceRequestSchema.index({ assignedTo: 1, status: 1 });
 serviceRequestSchema.index({ status: 1, createdAt: -1 });
 serviceRequestSchema.index({ category: 1 });
 
