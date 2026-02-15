@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend API Tester</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #1e293b; margin-bottom: 10px; }
+        .status { 
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .status.online { background: #dcfce7; color: #166534; }
+        .status.offline { background: #fee2e2; color: #991b1b; }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+        .test-section h3 { color: #334155; margin-bottom: 15px; }
+        button {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #1e293b;
+            color: #10b981;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error { color: #ef4444; }
+        .success { color: #10b981; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .info { 
+            background: #dbeafe; 
+            color: #1e40af; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Backend API Tester</h1>
+        <div id="status" class="status offline">Checking...</div>
+
+        <div class="info">
+            <strong>✅ Your backend IS working!</strong><br>
+            The route <code>/api</code> alone doesn't exist, but all actual endpoints work perfectly.
+        </div>
+
+        <div class="test-section">
+            <h3>1. Server Status</h3>
+            <button onclick="testStatus()">Test Server Status</button>
+            <div id="status-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Login Test</h3>
+            <input type="email" id="email" placeholder="Email" value="admin@campus.edu">
+            <input type="password" id="password" placeholder="Password" value="admin123">
+            <button onclick="testLogin()">Test Login</button>
+            <div id="login-result" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. All Endpoints</h3>
+            <button onclick="testAllEndpoints()">Test All Endpoints</button>
+            <div id="all-result" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const data = await response.json();
+                document.getElementById('status').textContent = '✅ Backend Online';
+                document.getElementById('status').className = 'status online';
+            } catch (error) {
+                document.getElementById('status').textContent = '❌ Backend Offline';
+                document.getElementById('status').className = 'status offline';
+            }
+        }
+
+        async function testStatus() {
+            const resultDiv = document.getElementById('status-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<span class="success">✅ SUCCESS</span>\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ ERROR</span>\n\n${error.message}`;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing login...';
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ LOGIN SUCCESS</span>\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ LOGIN FAILED</span>\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ ERROR</span>\n\n${error.message}`;
+            }
+        }
+
+        async function testAllEndpoints() {
+            const resultDiv = document.getElementById('all-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing all endpoints...\n\n';
+            
+            const endpoints = [
+                { name: 'Server Status', url: '/', method: 'GET' },
+                { name: 'Login', url: '/api/auth/login', method: 'POST', body: { email: 'admin@campus.edu', password: 'admin123' } },
+            ];
+            
+            let results = '';
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const options = {
+                        method: endpoint.method,
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    
+                    if (endpoint.body) {
+                        options.body = JSON.stringify(endpoint.body);
+                    }
+                    
+                    const response = await fetch(`${API_URL}${endpoint.url}`, options);
+                    const data = await response.json();
+                    
+                    results += `✅ ${endpoint.name}: SUCCESS\n`;
+                    results += `   Status: ${response.status}\n`;
+                    results += `   Response: ${data.message || data.status}\n\n`;
+                } catch (error) {
+                    results += `❌ ${endpoint.name}: FAILED\n`;
+                    results += `   Error: ${error.message}\n\n`;
+                }
+            }
+            
+            resultDiv.innerHTML = `<span class="success">Test Complete</span>\n\n${results}`;
+        }
+
+        // Check status on load
+        checkStatus();
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>

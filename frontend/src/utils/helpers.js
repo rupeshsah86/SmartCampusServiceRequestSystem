@@ -79,11 +79,21 @@ export const validatePhone = (phone) => {
 
 // Handle API errors
 export const handleApiError = (error) => {
+  // Network errors (backend not running)
+  if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+    return 'Cannot connect to server. Please ensure the backend is running.';
+  }
+  
+  // Server response errors
   if (error.response?.data?.message) {
     return error.response.data.message;
   }
+  
+  // Validation errors
   if (error.response?.data?.data && Array.isArray(error.response.data.data)) {
     return error.response.data.data.map(err => err.msg).join(', ');
   }
-  return 'An unexpected error occurred';
+  
+  // Generic error
+  return error.message || 'An unexpected error occurred';
 };

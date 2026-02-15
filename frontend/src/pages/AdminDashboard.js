@@ -53,9 +53,11 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const response = await requestAPI.getAllRequests(filters);
+      console.log('Requests response:', response.data);
       setRequests(response.data.data.requests);
       setError('');
     } catch (err) {
+      console.error('Error fetching requests:', err);
       setError(handleApiError(err));
     } finally {
       setLoading(false);
@@ -66,9 +68,11 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getUsers(filters);
+      console.log('Users response:', response.data);
       setUsers(response.data.data.users);
       setError('');
     } catch (err) {
+      console.error('Error fetching users:', err);
       setError(handleApiError(err));
     } finally {
       setLoading(false);
@@ -306,7 +310,8 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {requests.map(request => (
+              {requests && requests.length > 0 ? (
+                requests.map(request => (
                 <tr key={request._id}>
                   <td>
                     <input
@@ -322,9 +327,9 @@ const AdminDashboard = () => {
                   <td>{request.title}</td>
                   <td>
                     <div className="user-info-cell">
-                      <div className="user-name">{request.userId.name}</div>
-                      <div className="user-email">{request.userId.email}</div>
-                      <div className="user-dept">{request.userId.department}</div>
+                      <div className="user-name">{request.userId?.name || 'N/A'}</div>
+                      <div className="user-email">{request.userId?.email || 'N/A'}</div>
+                      <div className="user-dept">{request.userId?.department || 'N/A'}</div>
                     </div>
                   </td>
                   <td>
@@ -361,7 +366,16 @@ const AdminDashboard = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              ) : (
+                <tr>
+                  <td colSpan="9" className="empty-state">
+                    <div className="empty-state-icon">📋</div>
+                    <div className="empty-state-title">No Requests Found</div>
+                    <div className="empty-state-text">There are no service requests to display</div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
@@ -395,7 +409,8 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map(user => (
+              {users && users.length > 0 ? (
+                users.map(user => (
                 <tr key={user._id}>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
@@ -405,7 +420,7 @@ const AdminDashboard = () => {
                     </span>
                   </td>
                   <td>{user.department}</td>
-                  <td>{user.requestCount}</td>
+                  <td>{user.requestCount || 0}</td>
                   <td>
                     <span className={`badge ${user.isActive ? 'badge-success' : 'badge-danger'}`}>
                       {user.isActive ? 'Active' : 'Inactive'}
@@ -413,7 +428,16 @@ const AdminDashboard = () => {
                   </td>
                   <td>{formatDate(user.createdAt)}</td>
                 </tr>
-              ))}
+              ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="empty-state">
+                    <div className="empty-state-icon">👥</div>
+                    <div className="empty-state-title">No Users Found</div>
+                    <div className="empty-state-text">There are no users to display</div>
+                  </td>
+                </tr>
+              )}}
             </tbody>
           </table>
         )}

@@ -65,7 +65,9 @@ const Login = () => {
         setErrors({ submit: result.message || 'Login failed. Please try again.' });
       }
     } catch (error) {
-      setErrors({ submit: handleApiError(error) || 'An unexpected error occurred. Please try again.' });
+      const errorMessage = handleApiError(error);
+      setErrors({ submit: errorMessage });
+      console.error('Login error:', error);
     } finally {
       setLoading(false);
     }

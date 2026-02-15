@@ -87,9 +87,20 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error);
       dispatch({ type: 'SET_LOADING', payload: false });
+      
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to server. Please ensure the backend is running on port 8000.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        message: error.response?.data?.message || error.message || 'Login failed',
+        message: errorMessage,
       };
     }
   };
@@ -99,7 +110,6 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await authAPI.register(userData);
       
-      // Check if response is successful
       if (!response.data.success) {
         throw new Error(response.data.message || 'Registration failed');
       }
@@ -117,9 +127,20 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to server. Please ensure the backend is running on port 8000.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        message: error.response?.data?.message || error.message || 'Registration failed',
+        message: errorMessage,
       };
     }
   };
