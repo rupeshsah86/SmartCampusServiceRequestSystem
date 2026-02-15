@@ -46,7 +46,22 @@ const submitFeedback = asyncHandler(async (req, res) => {
     overallSatisfaction
   });
 
-  await feedback.populate('requestId', 'title requestId');
+  await feedback.populate('requestId', 'title requestId assignedTo');
+  await feedback.populate('userId', 'name email');
+  
+  // Send email to technician if assigned
+  if (request.assignedTo) {
+    const User = require('../models/User');
+    const technician = await User.findById(request.assignedTo);
+    if (technician) {
+      const { sendEmail, emailTemplates } = require('../utils/emailService');
+      await sendEmail(
+        technician.email,
+        '⭐ Feedback Received',
+        emailTemplates.feedbackReceived(technician, request, feedback)
+      );
+    }
+  }
 
   sendResponse(res, 201, true, 'Feedback submitted successfully', feedback);
 });

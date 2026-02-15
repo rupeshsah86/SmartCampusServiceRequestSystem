@@ -62,17 +62,31 @@ const createRequest = asyncHandler(async (req, res) => {
 
 // Get user's service requests
 const getUserRequests = asyncHandler(async (req, res) => {
-  const { status, category, page = 1, limit = 10 } = req.query;
+  const { status, category, search, sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 10 } = req.query;
   
   const filter = { userId: req.user._id };
   if (status) filter.status = status;
   if (category) filter.category = category;
+  
+  // Add search functionality
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { requestId: { $regex: search, $options: 'i' } },
+      { location: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } }
+    ];
+  }
 
   const skip = (page - 1) * limit;
   
+  // Build sort object
+  const sort = {};
+  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+  
   const requests = await ServiceRequest.find(filter)
     .populate('userId', 'name email department')
-    .sort({ createdAt: -1 })
+    .sort(sort)
     .skip(skip)
     .limit(parseInt(limit));
 
@@ -237,7 +251,7 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     details: workNote || resolutionNotes || `Status updated by ${req.user.role}`
   });
 
-  // Set timestamps
+  // Set timestamps and send emails
   if (status === 'resolved') {
     request.resolvedAt = new Date();
     await createNotification(
@@ -247,6 +261,13 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
       'Request Resolved - Please Confirm',
       `Your request "${request.title}" has been resolved. Please review and confirm.`
     );
+    // Send email to user
+    const user = await ServiceRequest.findById(request._id).populate('userId', 'name email');
+    await sendEmail(
+      user.userId.email,
+      '✅ Request Resolved - Action Required',
+      emailTemplates.requestResolved(user.userId, request)
+    );
   }
   if (status === 'closed') request.closedAt = new Date();
   
@@ -254,6 +275,19 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
   if (status === 'reopened') {
     request.reopenedCount += 1;
     request.resolvedAt = null;
+  }
+
+  // Handle assignment
+  if (assignedTo && req.user.role === 'admin') {
+    const user = await ServiceRequest.findById(request._id).populate('userId', 'name email');
+    const technician = await require('../models/User').findById(assignedTo);
+    if (user && technician) {
+      await sendEmail(
+        user.userId.email,
+        '👤 Technician Assigned to Your Request',
+        emailTemplates.requestAssigned(user.userId, request, technician)
+      );
+    }
   }
 
   // Create notification for status update
@@ -353,6 +387,13 @@ const confirmResolution = asyncHandler(async (req, res) => {
       );
     }
     
+    // Send email to user
+    await sendEmail(
+      request.userId.email,
+      '🎉 Request Closed Successfully',
+      emailTemplates.requestClosed(request.userId, request)
+    );
+    
     await request.save();
     await request.populate('workNotes.addedBy', 'name role');
     await request.populate('activityLogs.performedBy', 'name role');
@@ -379,6 +420,13 @@ const confirmResolution = asyncHandler(async (req, res) => {
         'resolution_rejected',
         'Resolution Rejected - Ticket Reopened',
         `User rejected your resolution for "${request.title}". Please review.`
+      );
+      
+      // Send email to technician
+      await sendEmail(
+        request.assignedTo.email,
+        '🔄 Request Reopened',
+        emailTemplates.requestReopened(request.assignedTo, request, request.userId)
       );
     }
     

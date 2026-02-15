@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ThemeToggle from './components/ThemeToggle';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -147,6 +148,7 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
+        <ThemeToggle />
         <AppRoutes />
       </div>
     </AuthProvider>

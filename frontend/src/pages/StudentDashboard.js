@@ -6,6 +6,7 @@ import { debounce } from '../utils/performance';
 import { sanitizeInput } from '../utils/security';
 import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError } from '../utils/helpers';
 import '../styles/dashboard.css';
+import '../styles/search.css';
 
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -16,6 +17,9 @@ const StudentDashboard = () => {
   const [filters, setFilters] = useState({
     status: '',
     category: '',
+    search: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
     page: 1,
     limit: 10
   });
@@ -158,6 +162,17 @@ const StudentDashboard = () => {
           <div className="requests-section">
             <div className="section-header">
               <h2 className="section-title">My Service Requests</h2>
+              
+              {/* Search Bar */}
+              <div className="search-bar">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="🔍 Search by title, ID, or location..."
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                />
+              </div>
+              
               <div className="filters">
                 <div className="filter-group">
                   <label className="filter-label">Status</label>
@@ -187,6 +202,19 @@ const StudentDashboard = () => {
                     <option value="facilities">Facilities</option>
                     <option value="security">Security</option>
                     <option value="other">Other</option>
+                  </select>
+                </div>
+                
+                <div className="filter-group">
+                  <label className="filter-label">Sort By</label>
+                  <select
+                    className="filter-select"
+                    value={filters.sortBy}
+                    onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                  >
+                    <option value="createdAt">Date Created</option>
+                    <option value="priority">Priority</option>
+                    <option value="status">Status</option>
                   </select>
                 </div>
               </div>
