@@ -21,7 +21,7 @@ const register = asyncHandler(async (req, res) => {
   // Create user
   const userData = { name, email, password, role, department, phone };
   if (role === 'student' && studentId) userData.studentId = studentId;
-  if (role === 'faculty' && employeeId) userData.employeeId = employeeId;
+  if ((role === 'faculty' || role === 'technician') && employeeId) userData.employeeId = employeeId;
 
   const user = await User.create(userData);
   const token = generateToken(user._id);
