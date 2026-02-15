@@ -15,11 +15,56 @@ const RequestDetails = () => {
   const [error, setError] = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [slaStatus, setSlaStatus] = useState({ timeLeft: '', isOverdue: false, percentage: 0 });
 
   useEffect(() => {
     fetchRequest();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (request && request.status !== 'closed' && request.status !== 'resolved') {
+      calculateSLA();
+      const interval = setInterval(calculateSLA, 60000); // Update every minute
+      return () => clearInterval(interval);
+    }
+  }, [request]);
+
+  const calculateSLA = () => {
+    if (!request) return;
+
+    const slaHours = {
+      urgent: 24,
+      high: 24,
+      medium: 48,
+      low: 72
+    };
+
+    const slaTime = slaHours[request.priority] || 48;
+    const createdAt = new Date(request.createdAt);
+    const now = new Date();
+    const elapsedHours = (now - createdAt) / (1000 * 60 * 60);
+    const remainingHours = slaTime - elapsedHours;
+
+    if (remainingHours <= 0) {
+      setSlaStatus({
+        timeLeft: 'OVERDUE',
+        isOverdue: true,
+        percentage: 100
+      });
+    } else {
+      const days = Math.floor(remainingHours / 24);
+      const hours = Math.floor(remainingHours % 24);
+      const timeLeft = days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+      const percentage = ((slaTime - remainingHours) / slaTime) * 100;
+
+      setSlaStatus({
+        timeLeft,
+        isOverdue: false,
+        percentage
+      });
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -175,6 +220,49 @@ const RequestDetails = () => {
                 </div>
               </div>
             </div>
+
+            {/* SLA Timer */}
+            {request.status !== 'closed' && request.status !== 'resolved' && (
+              <div className="form-group">
+                <label className="form-label">SLA Status</label>
+                <div style={{
+                  padding: '15px',
+                  backgroundColor: slaStatus.isOverdue ? '#fee2e2' : '#eff6ff',
+                  border: `2px solid ${slaStatus.isOverdue ? '#dc2626' : '#3b82f6'}`,
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '600',
+                      color: slaStatus.isOverdue ? '#dc2626' : '#1e40af'
+                    }}>
+                      {slaStatus.isOverdue ? '⚠️ OVERDUE' : `⏱️ Time Remaining: ${slaStatus.timeLeft}`}
+                    </span>
+                    <span style={{ 
+                      fontSize: '12px', 
+                      color: '#64748b',
+                      fontWeight: '500'
+                    }}>
+                      Priority: {formatPriority(request.priority)}
+                    </span>
+                  </div>
+                  <div style={{
+                    height: '8px',
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: '4px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${slaStatus.percentage}%`,
+                      backgroundColor: slaStatus.isOverdue ? '#dc2626' : slaStatus.percentage > 75 ? '#f59e0b' : '#3b82f6',
+                      transition: 'width 0.3s ease'
+                    }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Description</label>

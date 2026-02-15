@@ -214,15 +214,51 @@ const StudentDashboard = () => {
                   </Link>
                 </div>
               ) : (
-                requests.map((request) => (
+                requests.map((request) => {
+                  // Calculate SLA status
+                  const calculateSLAIndicator = () => {
+                    if (request.status === 'closed' || request.status === 'resolved') return null;
+                    
+                    const slaHours = {
+                      urgent: 24,
+                      high: 24,
+                      medium: 48,
+                      low: 72
+                    };
+                    
+                    const slaTime = slaHours[request.priority] || 48;
+                    const createdAt = new Date(request.createdAt);
+                    const now = new Date();
+                    const elapsedHours = (now - createdAt) / (1000 * 60 * 60);
+                    const isOverdue = elapsedHours > slaTime;
+                    
+                    return isOverdue ? (
+                      <span style={{
+                        fontSize: '12px',
+                        padding: '2px 8px',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        borderRadius: '4px',
+                        fontWeight: '600'
+                      }}>
+                        ⚠️ OVERDUE
+                      </span>
+                    ) : null;
+                  };
+                  
+                  return (
                   <div
                     key={request._id}
                     className="request-item"
                     onClick={() => handleRequestClick(request._id)}
+                    style={request.status !== 'closed' && request.status !== 'resolved' && 
+                           new Date() - new Date(request.createdAt) > (request.priority === 'urgent' || request.priority === 'high' ? 24 : request.priority === 'medium' ? 48 : 72) * 3600000
+                           ? { borderLeft: '4px solid #dc2626' } : {}}
                   >
                     <div className="request-header">
                       <h3 className="request-title">{request.title}</h3>
                       <div className="request-meta">
+                        {calculateSLAIndicator()}
                         <span
                           className="badge"
                           style={{ backgroundColor: getStatusColor(request.status), color: 'white' }}
@@ -285,7 +321,8 @@ const StudentDashboard = () => {
                       )}
                     </div>
                   </div>
-                ))
+                );
+                })
               )}
             </div>
           </div>

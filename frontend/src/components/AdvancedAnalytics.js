@@ -1,4 +1,5 @@
 import React from 'react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import '../styles/analytics.css';
 
 const AdvancedAnalytics = ({ stats }) => {
@@ -7,6 +8,40 @@ const AdvancedAnalytics = ({ stats }) => {
   const calculatePercentage = (value, total) => {
     return total > 0 ? ((value / total) * 100).toFixed(1) : 0;
   };
+
+  // Colors for charts
+  const COLORS = {
+    pending: '#ffc107',
+    in_progress: '#17a2b8',
+    resolved: '#28a745',
+    closed: '#6c757d',
+    reopened: '#dc3545'
+  };
+
+  const CATEGORY_COLORS = ['#6366f1', '#8b5cf6', '#d946ef', '#f97316', '#10b981'];
+
+  // Prepare data for pie chart
+  const categoryData = stats.categoryDistribution.map(item => ({
+    name: item._id.replace('_', ' ').toUpperCase(),
+    value: item.count
+  }));
+
+  // Prepare data for bar chart (status distribution)
+  const statusData = stats.statusDistribution.map(item => ({
+    name: item._id.replace('_', ' ').toUpperCase(),
+    count: item.count,
+    fill: COLORS[item._id] || '#6366f1'
+  }));
+
+  // Mock monthly trend data (you can replace with real data from backend)
+  const monthlyData = [
+    { month: 'Jan', requests: 45 },
+    { month: 'Feb', requests: 52 },
+    { month: 'Mar', requests: 48 },
+    { month: 'Apr', requests: 61 },
+    { month: 'May', requests: 55 },
+    { month: 'Jun', requests: stats.overview.totalRequests }
+  ];
 
   const getStatusPercentages = () => {
     const total = stats.overview.totalRequests;
@@ -26,49 +61,75 @@ const AdvancedAnalytics = ({ stats }) => {
 
   return (
     <div className="advanced-analytics">
-      <div className="analytics-row">
+      {/* Charts Row */}
+      <div className="analytics-charts-row">
+        {/* Monthly Trend Line Chart */}
         <div className="analytics-chart-card">
-          <h3>Status Distribution</h3>
-          <div className="chart-bars">
-            {getStatusPercentages().map(item => (
-              <div key={item._id} className="chart-bar-item">
-                <div className="chart-bar-label">
-                  <span>{item._id.replace('_', ' ')}</span>
-                  <span className="chart-bar-value">{item.count}</span>
-                </div>
-                <div className="chart-bar-track">
-                  <div 
-                    className={`chart-bar-fill status-${item._id}`}
-                    style={{ width: `${item.percentage}%` }}
-                  >
-                    <span className="chart-bar-percentage">{item.percentage}%</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="chart-title">📈 Monthly Request Trend</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="requests" 
+                stroke="#6366f1" 
+                strokeWidth={3}
+                dot={{ fill: '#6366f1', r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
+        {/* Category Pie Chart */}
         <div className="analytics-chart-card">
-          <h3>Category Distribution</h3>
-          <div className="chart-bars">
-            {getCategoryPercentages().map(item => (
-              <div key={item._id} className="chart-bar-item">
-                <div className="chart-bar-label">
-                  <span>{item._id.replace('_', ' ')}</span>
-                  <span className="chart-bar-value">{item.count}</span>
-                </div>
-                <div className="chart-bar-track">
-                  <div 
-                    className="chart-bar-fill category-bar"
-                    style={{ width: `${item.percentage}%` }}
-                  >
-                    <span className="chart-bar-percentage">{item.percentage}%</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="chart-title">🎯 Category Distribution</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Status Bar Chart */}
+        <div className="analytics-chart-card">
+          <h3 className="chart-title">📊 Status Distribution</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={statusData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+              />
+              <Legend />
+              <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                {statusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
