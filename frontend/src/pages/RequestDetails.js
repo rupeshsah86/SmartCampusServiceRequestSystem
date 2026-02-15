@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { requestAPI } from '../services/api';
+import { requestAPI, feedbackAPI } from '../services/api';
 import { formatDate, formatStatus, formatPriority, getStatusColor, getPriorityColor, handleApiError, formatResolutionTime } from '../utils/helpers';
 import Toast from '../components/Toast';
 import '../styles/forms.css';
@@ -11,6 +11,7 @@ const RequestDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [request, setRequest] = useState(null);
+  const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -71,6 +72,18 @@ const RequestDetails = () => {
       setLoading(true);
       const response = await requestAPI.getById(id);
       setRequest(response.data.data);
+      
+      // Fetch feedback if request is closed
+      if (response.data.data.status === 'closed') {
+        try {
+          const feedbackResponse = await feedbackAPI.getFeedbackByRequest(id);
+          setFeedback(feedbackResponse.data.data);
+        } catch (err) {
+          // Feedback not found is okay
+          console.log('No feedback found');
+        }
+      }
+      
       setError('');
     } catch (err) {
       setError(handleApiError(err));
@@ -502,6 +515,53 @@ const RequestDetails = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {feedback && (
+              <div className="form-group">
+                <label className="form-label">User Feedback</label>
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                  border: '2px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Overall Rating</div>
+                      <div style={{ fontSize: '24px' }}>{'⭐'.repeat(feedback.rating)}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Service Quality</div>
+                      <div style={{ fontSize: '24px' }}>{'⭐'.repeat(feedback.serviceQuality)}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Response Time</div>
+                      <div style={{ fontSize: '24px' }}>{'⭐'.repeat(feedback.responseTime)}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Satisfaction</div>
+                      <div style={{ fontSize: '24px' }}>{'⭐'.repeat(feedback.overallSatisfaction)}</div>
+                    </div>
+                  </div>
+                  {feedback.comments && (
+                    <div style={{
+                      padding: '15px',
+                      backgroundColor: 'white',
+                      borderRadius: '6px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Comments:</div>
+                      <div style={{ color: 'var(--color-text-primary)', lineHeight: '1.6' }}>
+                        {feedback.comments}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '15px', fontSize: '12px', color: '#94a3b8' }}>
+                    Submitted by {feedback.userId?.name} on {formatDate(feedback.createdAt)}
+                  </div>
                 </div>
               </div>
             )}

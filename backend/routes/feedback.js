@@ -3,14 +3,18 @@ const {
   submitFeedback,
   getFeedbackByRequest,
   getAllFeedback,
-  getFeedbackStats
+  getFeedbackStats,
+  getPublicFeedback
 } = require('../controllers/feedbackController');
 const { protect, authorize } = require('../middleware/auth');
 const { submitFeedbackValidation } = require('../middleware/feedbackValidation');
 
 const router = express.Router();
 
-// All routes require authentication
+// Public route - no authentication required
+router.get('/public', getPublicFeedback);
+
+// All routes below require authentication
 router.use(protect);
 
 // User routes

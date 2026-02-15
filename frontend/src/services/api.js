@@ -66,4 +66,10 @@ export const adminAPI = {
   getTechnicianPerformance: () => api.get('/admin/technicians/performance'),
 };
 
+// Feedback API calls
+export const feedbackAPI = {
+  getFeedbackByRequest: (requestId) => api.get(`/feedback/${requestId}/details`),
+  getPublicFeedback: (limit = 6) => axios.get(`${API_URL}/feedback/public?limit=${limit}`),
+};
+
 export default api;

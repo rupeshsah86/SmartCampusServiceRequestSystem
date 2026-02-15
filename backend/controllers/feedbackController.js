@@ -132,9 +132,23 @@ const getFeedbackStats = asyncHandler(async (req, res) => {
   });
 });
 
+// Get public feedback (no authentication required)
+const getPublicFeedback = asyncHandler(async (req, res) => {
+  const { limit = 6 } = req.query;
+
+  const feedback = await Feedback.find({ rating: { $gte: 4 } })
+    .populate('userId', 'name department')
+    .populate('requestId', 'category')
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit));
+
+  sendResponse(res, 200, true, 'Public feedback retrieved successfully', feedback);
+});
+
 module.exports = {
   submitFeedback,
   getFeedbackByRequest,
   getAllFeedback,
-  getFeedbackStats
+  getFeedbackStats,
+  getPublicFeedback
 };
