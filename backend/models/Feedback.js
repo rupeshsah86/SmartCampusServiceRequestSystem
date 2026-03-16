@@ -1,52 +1,15 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const feedbackSchema = new mongoose.Schema({
-  requestId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ServiceRequest',
-    required: true,
-    unique: true
-  },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  rating: {
-    type: Number,
-    required: [true, 'Overall rating is required'],
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot exceed 5']
-  },
-  comments: {
-    type: String,
-    trim: true,
-    maxlength: [300, 'Comments cannot exceed 300 characters']
-  },
-  serviceQuality: {
-    type: Number,
-    required: [true, 'Service quality rating is required'],
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot exceed 5']
-  },
-  responseTime: {
-    type: Number,
-    required: [true, 'Response time rating is required'],
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot exceed 5']
-  },
-  overallSatisfaction: {
-    type: Number,
-    required: [true, 'Overall satisfaction rating is required'],
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot exceed 5']
-  }
-}, {
-  timestamps: true
-});
+const Feedback = sequelize.define('Feedback', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  requestId: { type: DataTypes.INTEGER, allowNull: false, unique: true, references: { model: 'ServiceRequests', key: 'id' } },
+  userId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' } },
+  rating: { type: DataTypes.INTEGER, allowNull: false },
+  comments: { type: DataTypes.STRING(300) },
+  serviceQuality: { type: DataTypes.INTEGER, allowNull: false },
+  responseTime: { type: DataTypes.INTEGER, allowNull: false },
+  overallSatisfaction: { type: DataTypes.INTEGER, allowNull: false }
+}, { timestamps: true });
 
-// Index for better query performance
-feedbackSchema.index({ requestId: 1 });
-feedbackSchema.index({ userId: 1 });
-
-module.exports = mongoose.model('Feedback', feedbackSchema);
+module.exports = Feedback;

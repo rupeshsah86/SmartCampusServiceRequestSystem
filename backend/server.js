@@ -10,7 +10,7 @@ const socketIo = require('socket.io');
 const { sanitizeInput, mongoSanitize, createRateLimit } = require('./middleware/security');
 require('dotenv').config();
 
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 
 const app = express();
 const server = http.createServer(app);
@@ -55,7 +55,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
-// Connect to MongoDB
+// Connect to PostgreSQL
 connectDB();
 
 // Security middleware
@@ -100,6 +100,9 @@ app.use(mongoSanitize());
 app.use(sanitizeInput);
 
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+
+// Load model associations
+require('./models/associations');
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

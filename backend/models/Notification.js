@@ -1,43 +1,17 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const notificationSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  requestId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ServiceRequest',
-    required: true
-  },
+const Notification = sequelize.define('Notification', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  userId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Users', key: 'id' } },
+  requestId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'ServiceRequests', key: 'id' } },
   type: {
-    type: String,
-    required: true,
-    enum: ['status_update', 'assignment', 'resolution', 'feedback_request', 'resolution_pending', 'resolution_accepted', 'resolution_rejected']
+    type: DataTypes.ENUM('status_update', 'assignment', 'resolution', 'feedback_request', 'resolution_pending', 'resolution_accepted', 'resolution_rejected'),
+    allowNull: false
   },
-  title: {
-    type: String,
-    required: [true, 'Title is required'],
-    trim: true,
-    maxlength: [100, 'Title cannot exceed 100 characters']
-  },
-  message: {
-    type: String,
-    required: [true, 'Message is required'],
-    trim: true,
-    maxlength: [200, 'Message cannot exceed 200 characters']
-  },
-  isRead: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  timestamps: true
-});
+  title: { type: DataTypes.STRING(100), allowNull: false },
+  message: { type: DataTypes.STRING(200), allowNull: false },
+  isRead: { type: DataTypes.BOOLEAN, defaultValue: false }
+}, { timestamps: true });
 
-// Index for better query performance
-notificationSchema.index({ userId: 1, isRead: 1 });
-notificationSchema.index({ createdAt: -1 });
-
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = Notification;

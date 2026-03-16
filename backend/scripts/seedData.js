@@ -1,26 +1,22 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
+const { connectDB } = require('../config/database');
 const User = require('../models/User');
 const ServiceRequest = require('../models/ServiceRequest');
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+require('../models/associations');
 
 const seedData = async () => {
   try {
-    // Clear existing data
-    await User.deleteMany({});
-    await ServiceRequest.deleteMany({});
+    await connectDB();
 
+    // Clear existing data
+    await ServiceRequest.destroy({ where: {} });
+    await User.destroy({ where: {} });
     console.log('🗑️  Cleared existing data');
 
     // Create sample users
-    const users = [
+    const users = await User.bulkCreate([
       {
         name: 'Admin User',
         email: 'admin@campus.edu',
@@ -56,60 +52,72 @@ const seedData = async () => {
         phone: '9876543213',
         employeeId: 'TECH2024001'
       }
-    ];
+    ], { individualHooks: false }); // skip beforeSave hook since we pre-hashed
 
-    const createdUsers = await User.insertMany(users);
     console.log('👥 Created sample users');
 
     // Create sample service requests
-    const requests = [
+    await ServiceRequest.bulkCreate([
       {
         requestId: 'REQ2024001',
-        userId: createdUsers[1]._id, // John Student
+        userId: users[1].id,
         title: 'WiFi Connection Issue in Library',
         description: 'Unable to connect to campus WiFi in the main library. Connection keeps dropping.',
         category: 'it_support',
         priority: 'medium',
         status: 'pending',
         location: 'Main Library - 2nd Floor',
-        urgencyLevel: 'normal'
+        urgencyLevel: 'normal',
+        attachments: [],
+        workNotes: [],
+        proofOfWork: [],
+        activityLogs: [],
+        aiSuggestion: {}
       },
       {
         requestId: 'REQ2024002',
-        userId: createdUsers[2]._id, // Dr. Sarah Faculty
+        userId: users[2].id,
         title: 'Projector Not Working',
         description: 'Classroom projector is not displaying properly. Screen appears dim and flickering.',
         category: 'maintenance',
         priority: 'high',
         status: 'in_progress',
         location: 'Academic Block - Room 301',
-        assignedTo: createdUsers[3]._id, // Mike Technician
-        urgencyLevel: 'urgent'
+        assignedTo: users[3].id,
+        urgencyLevel: 'urgent',
+        attachments: [],
+        workNotes: [],
+        proofOfWork: [],
+        activityLogs: [],
+        aiSuggestion: {}
       },
       {
         requestId: 'REQ2024003',
-        userId: createdUsers[1]._id, // John Student
+        userId: users[1].id,
         title: 'Air Conditioning Issue',
         description: 'AC unit in dormitory room is making loud noises and not cooling properly.',
         category: 'facilities',
         priority: 'medium',
         status: 'resolved',
         location: 'Hostel Block A - Room 205',
-        assignedTo: createdUsers[3]._id,
+        assignedTo: users[3].id,
         resolutionNotes: 'Replaced AC filter and serviced the unit. Working properly now.',
-        resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        urgencyLevel: 'normal'
+        resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        urgencyLevel: 'normal',
+        attachments: [],
+        workNotes: [],
+        proofOfWork: [],
+        activityLogs: [],
+        aiSuggestion: {}
       }
-    ];
+    ]);
 
-    await ServiceRequest.insertMany(requests);
     console.log('📋 Created sample service requests');
-
     console.log('\n✅ Seed data created successfully!');
     console.log('\n📧 Sample Login Credentials:');
-    console.log('Admin: admin@campus.edu / admin123');
-    console.log('Student: john.student@campus.edu / student123');
-    console.log('Faculty: sarah.faculty@campus.edu / faculty123');
+    console.log('Admin:      admin@campus.edu / admin123');
+    console.log('Student:    john.student@campus.edu / student123');
+    console.log('Faculty:    sarah.faculty@campus.edu / faculty123');
     console.log('Technician: mike.tech@campus.edu / tech123');
 
     process.exit(0);

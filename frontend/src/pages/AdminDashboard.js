@@ -209,7 +209,7 @@ const AdminDashboard = () => {
                 <h3 className="analytics-title">Avg Resolution Time</h3>
                 <div className="analytics-icon" style={{ backgroundColor: '#ffc107' }}>⏱️</div>
               </div>
-              <div className="analytics-value">{stats.overview.avgResolutionTime.toFixed(1)} days</div>
+              <div className="analytics-value">{(stats.overview.avgResolutionTime || 0).toFixed(1)} days</div>
             </div>
           </div>
 
