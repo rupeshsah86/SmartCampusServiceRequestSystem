@@ -1,8 +1,8 @@
 # 🏫 Smart Campus Service Request System
 
-> A comprehensive enterprise-level digital solution for managing campus maintenance and support services, built with the MEARN stack (MongoDB, Express.js, React.js, Node.js).
+> A comprehensive enterprise-level digital solution for managing campus maintenance and support services, built with the PERN stack (PostgreSQL, Express.js, React.js, Node.js).
 
-**Version:** 4.0 (Enterprise Complete)  
+**Version:** 5.0 (Enterprise Enhanced)  
 **Status:** ✅ Production Ready  
 **Last Updated:** February 2025
 
@@ -106,15 +106,21 @@
 - **Axios** - HTTP client
 - **CSS3** - Modern styling with gradients
 - **Context API** - State management
+- **Socket.io Client** - Real-time communication
+- **Recharts** - Data visualization
+- **jsPDF** - PDF generation
+- **QRCode.react** - QR code generation
 
 ### Backend
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose** - ODM for MongoDB
+- **PostgreSQL** - Relational database
+- **Sequelize** - ORM for PostgreSQL
 - **JWT** - Authentication tokens
 - **bcryptjs** - Password hashing
 - **Multer** - File upload handling
+- **Socket.io** - Real-time WebSocket server
+- **Node-cron** - Scheduled task execution
 
 ### Security & Performance
 - **Helmet** - Security headers
@@ -122,7 +128,7 @@
 - **Rate Limiting** - API protection
 - **Input Sanitization** - XSS protection
 - **Compression** - Response optimization
-- **MongoDB Indexing** - Query optimization
+- **PostgreSQL Indexing** - Query optimization
 
 ---
 
@@ -131,7 +137,7 @@
 ### Prerequisites
 ```bash
 Node.js (v14 or higher)
-MongoDB (v4.4 or higher)
+PostgreSQL (v13 or higher)
 npm or yarn
 ```
 
@@ -154,6 +160,12 @@ cp .env.example .env
 # Edit .env with your configuration
 nano .env
 
+# Create PostgreSQL database
+createdb smart_campus_db
+
+# Seed default users
+node scripts/seedData.js
+
 # Start backend server
 npm run dev
 ```
@@ -175,8 +187,8 @@ npm start
 
 #### 4. Access Application
 ```
-Frontend: http://localhost:3000
-Backend:  http://localhost:8000
+Frontend: http://localhost:3001
+Backend:  http://localhost:8001
 ```
 
 ### Environment Variables
@@ -184,8 +196,12 @@ Backend:  http://localhost:8000
 #### Backend (.env)
 ```env
 NODE_ENV=development
-PORT=8000
-MONGODB_URI=mongodb://localhost:27017/smart_campus_db
+PORT=8001
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=smart_campus_db
+DB_USER=your_postgres_username
+DB_PASS=your_postgres_password
 JWT_SECRET=your_secure_jwt_secret_min_32_characters
 JWT_EXPIRE=7d
 BCRYPT_ROUNDS=12
@@ -199,8 +215,9 @@ EMAIL_PASS=your-app-password
 
 #### Frontend (.env)
 ```env
-REACT_APP_API_URL=http://localhost:8000/api
+REACT_APP_API_URL=http://localhost:8001/api
 REACT_APP_APP_NAME=Smart Campus System
+PORT=3001
 ```
 
 ### Default Test Users
@@ -209,7 +226,7 @@ After running the seed script:
 
 ```bash
 cd backend
-npm run seed
+node scripts/seedData.js
 ```
 
 **Admin:**
@@ -217,15 +234,15 @@ npm run seed
 - Password: admin123
 
 **Technician:**
-- Email: tech@campus.edu
+- Email: mike.tech@campus.edu
 - Password: tech123
 
 **Student:**
-- Email: student@campus.edu
+- Email: john.student@campus.edu
 - Password: student123
 
 **Faculty:**
-- Email: faculty@campus.edu
+- Email: sarah.faculty@campus.edu
 - Password: faculty123
 
 ---
@@ -236,12 +253,13 @@ npm run seed
 smart-campus-system/
 ├── backend/
 │   ├── config/
-│   │   └── database.js              # MongoDB connection
+│   │   └── database.js              # PostgreSQL + Sequelize connection
 │   ├── controllers/
 │   │   ├── adminController.js       # Admin operations
 │   │   ├── authController.js        # Authentication
 │   │   ├── feedbackController.js    # Feedback management
 │   │   ├── notificationController.js # Notifications
+│   │   ├── recurringRequestController.js # Recurring requests
 │   │   └── requestController.js     # Request management
 │   ├── middleware/
 │   │   ├── auth.js                  # JWT authentication
@@ -250,21 +268,27 @@ smart-campus-system/
 │   │   ├── upload.js                # File upload
 │   │   └── validation.js            # Input validation
 │   ├── models/
-│   │   ├── Feedback.js              # Feedback schema
-│   │   ├── Notification.js          # Notification schema
-│   │   ├── ServiceRequest.js        # Request schema
-│   │   └── User.js                  # User schema
+│   │   ├── associations.js          # Sequelize model relationships
+│   │   ├── Feedback.js              # Feedback model
+│   │   ├── Notification.js          # Notification model
+│   │   ├── RecurringRequest.js      # Recurring request model
+│   │   ├── ServiceRequest.js        # Request model
+│   │   └── User.js                  # User model
 │   ├── routes/
 │   │   ├── admin.js                 # Admin routes
 │   │   ├── auth.js                  # Auth routes
 │   │   ├── feedback.js              # Feedback routes
 │   │   ├── notifications.js         # Notification routes
+│   │   ├── recurring.js             # Recurring request routes
 │   │   └── requests.js              # Request routes
+│   ├── scripts/
+│   │   └── seedData.js              # Database seeder
 │   ├── utils/
 │   │   ├── aiCategorization.js      # AI categorization
 │   │   ├── emailService.js          # Email service
 │   │   ├── helpers.js               # Helper functions
-│   │   └── performance.js           # Performance utils
+│   │   ├── performance.js           # Performance utils
+│   │   └── socketHelper.js          # Socket.io helpers
 │   ├── .env                         # Environment variables
 │   ├── package.json                 # Dependencies
 │   └── server.js                    # Entry point
@@ -625,7 +649,7 @@ npm start
 ### Deployment Checklist
 
 - [ ] Set `NODE_ENV=production`
-- [ ] Configure production MongoDB URI
+- [ ] Configure production PostgreSQL credentials
 - [ ] Set secure JWT secret (min 32 characters)
 - [ ] Update CORS origins
 - [ ] Enable HTTPS
@@ -673,7 +697,7 @@ server {
 
     # Backend API
     location /api {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:8001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -689,27 +713,31 @@ server {
 
 ### Common Issues
 
-#### 1. MongoDB Connection Error
+#### 1. PostgreSQL Connection Error
 ```
-Error: connect ECONNREFUSED 127.0.0.1:27017
+Database connection error: role "postgres" does not exist
 ```
 **Solution:**
 ```bash
-# Start MongoDB
-sudo systemctl start mongod
+# Find your PostgreSQL username
+whoami
 
-# Or on Mac
-brew services start mongodb-community
+# Create the database
+createdb smart_campus_db
+
+# Update .env with correct credentials
+DB_USER=your_system_username
+DB_PASS=
 ```
 
 #### 2. Port Already in Use
 ```
-Error: listen EADDRINUSE: address already in use :::8000
+Error: listen EADDRINUSE: address already in use :::8001
 ```
 **Solution:**
 ```bash
 # Find process using port
-lsof -i :8000
+lsof -i :8001
 
 # Kill process
 kill -9 <PID>
@@ -761,10 +789,10 @@ REACT_APP_DEBUG=true npm start
 ## 📊 Performance Optimization
 
 ### Backend Optimizations
-- ✅ MongoDB indexing on frequently queried fields
+- ✅ PostgreSQL indexing on frequently queried fields
 - ✅ Response compression with gzip
 - ✅ Rate limiting to prevent abuse
-- ✅ Efficient database queries with population
+- ✅ Efficient Sequelize queries with associations
 - ✅ Caching strategies for static data
 
 ### Frontend Optimizations
@@ -786,7 +814,7 @@ REACT_APP_DEBUG=true npm start
 - ✅ CORS configuration
 - ✅ Helmet security headers
 - ✅ XSS protection
-- ✅ MongoDB injection prevention
+- ✅ SQL injection prevention via Sequelize ORM
 - ✅ File upload validation
 - ✅ Role-based access control
 
@@ -817,7 +845,7 @@ REACT_APP_DEBUG=true npm start
 
 ### Recommended Tools
 - **Backend:** PM2, New Relic, DataDog
-- **Database:** MongoDB Atlas monitoring
+- **Database:** pgAdmin, PostgreSQL monitoring
 - **Frontend:** Google Analytics, Sentry
 - **Logs:** Winston, Morgan
 
@@ -913,17 +941,24 @@ SOFTWARE.
 
 ## 🎯 Roadmap
 
-### Version 5.0 (Planned)
+### Version 5.0 (✅ Completed)
+- [x] **Migrated to PostgreSQL** - Full migration from MongoDB to PostgreSQL using Sequelize ORM
+- [x] **User Profile Management** - View/edit profile, change password, account stats
+- [x] **Real-Time Notifications** - Socket.io integration with browser notifications
+- [x] **PDF Export System** - Export requests, reports, and performance metrics
+- [x] **Advanced Analytics Dashboard** - Enhanced charts and insights
+- [x] **QR Code System** - Generate and scan QR codes for requests
+- [x] **Recurring Requests** - Schedule automated maintenance requests
+
+### Version 6.0 (Planned)
 - [ ] Real-time chat support
 - [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] AI-powered issue categorization
-- [ ] Multi-language support
+- [ ] AI-powered issue categorization (enhanced)
 - [ ] Dark mode
-- [ ] Email notifications
+- [ ] Email notifications (fix Gmail timeout)
 - [ ] SMS notifications
 - [ ] Calendar integration
-- [ ] Export reports (PDF, Excel)
+- [ ] Export reports to Excel
 
 ---
 
@@ -935,10 +970,12 @@ If you find this project useful, please consider giving it a star on GitHub!
 
 ## 📊 Project Stats
 
-- **Lines of Code:** ~15,000+
-- **Files:** 50+
-- **Components:** 20+
-- **API Endpoints:** 30+
+- **Lines of Code:** ~18,000+
+- **Files:** 65+
+- **Components:** 28+
+- **API Endpoints:** 40+
+- **Database:** PostgreSQL
+- **ORM:** Sequelize
 - **Test Coverage:** 85%
 - **Performance Score:** 95/100
 - **Accessibility Score:** 98/100
@@ -960,7 +997,7 @@ If you find this project useful, please consider giving it a star on GitHub!
 
 **Built with ❤️ for Smart Campus Management**
 
-**Version 4.0 | Enterprise Complete | Production Ready**
+**Version 5.0 | PostgreSQL + Sequelize | Production Ready**
 
 ---
 
