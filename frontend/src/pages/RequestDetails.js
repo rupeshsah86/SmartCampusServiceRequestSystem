@@ -568,7 +568,7 @@ const RequestDetails = () => {
               </div>
             )}
 
-            {request.status === 'resolved' && request.userId._id === user?._id && !request.isLocked && (
+            {request.status === 'resolved' && (request.userId?._id || request.userId?.id) === (user?._id || user?.id) && !request.isLocked && (
               <div className="form-group">
                 <label className="form-label">Confirm Resolution</label>
                 <div style={{

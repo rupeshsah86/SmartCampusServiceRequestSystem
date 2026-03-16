@@ -27,4 +27,13 @@ const ServiceRequest = sequelize.define('ServiceRequest', {
   isLocked: { type: DataTypes.BOOLEAN, defaultValue: false }
 }, { timestamps: true });
 
+// Add _id alias so frontend code works without changes
+ServiceRequest.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values.id;
+  if (values.user) values.user._id = values.user.id;
+  if (values.technician) values.technician._id = values.technician.id;
+  return values;
+};
+
 module.exports = ServiceRequest;

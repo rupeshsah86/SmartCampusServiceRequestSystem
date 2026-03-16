@@ -12,4 +12,11 @@ const Feedback = sequelize.define('Feedback', {
   overallSatisfaction: { type: DataTypes.INTEGER, allowNull: false }
 }, { timestamps: true });
 
+// Add _id alias so frontend code works without changes
+Feedback.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values.id;
+  return values;
+};
+
 module.exports = Feedback;

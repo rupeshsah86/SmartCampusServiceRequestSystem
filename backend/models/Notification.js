@@ -14,4 +14,11 @@ const Notification = sequelize.define('Notification', {
   isRead: { type: DataTypes.BOOLEAN, defaultValue: false }
 }, { timestamps: true });
 
+// Add _id alias so frontend code works without changes
+Notification.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values.id;
+  return values;
+};
+
 module.exports = Notification;
